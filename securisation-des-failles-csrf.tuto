@@ -1,0 +1,272 @@
+<?xml version="1.0" encoding="utf-8"?>
+<minituto id="112693" generator="VT 3.5.2" language="zCode">
+  <titre>
+    <![CDATA[Sécurisation des failles CSRF]]>
+  </titre>
+  <avancement>
+    <![CDATA[100]]>
+  </avancement>
+  <licence>
+    <![CDATA[4]]>
+  </licence>
+  <difficulte>
+    <![CDATA[3]]>
+  </difficulte>
+  <temps>
+    <![CDATA[60]]>
+  </temps>
+  <introduction>
+    <![CDATA[Bienvenue à tous !
+
+Aujourd'hui, je vais vous introduire une nouvelle faille de sécurité, et vous expliquer comment vous en protéger au mieux.
+
+Si vous êtes développeur et que la notion de "token" ne vous dit rien, lisez vite ce tuto, on est peut-être déjà en train de vous pirater !
+
+<attention>Ce tutoriel concerne les sites PHP, vous devez donc maîtriser ce langage (c.f. : <lien url="http://www.siteduzero.com/tutoriel-3-14668-un-site-dynamique-avec-php.html">le tuto de M@teo21</lien>). Il est surtout utile pour les sites en activité, et assez complets, puisque ceux-ci doivent reposer sur un système de privilèges.</attention>
+
+C'est partiiiii ! ;)]]>
+  </introduction>
+  <sousparties>
+    
+      <souspartie id="112694">
+	<titre>
+	  <![CDATA[CSRF, késako?]]>
+	</titre>
+	<texte>
+	  <![CDATA[Je suis sûr que vous vous demandez : 
+
+<question>Mais c'est quoi ce CSRF dont il nous parle depuis tout à l'heure ?</question>
+Ah oui, j'avais oublié de vous expliquer ! :diable: 
+
+CSRF signifie "Cross-Site Request Forgeries". Je vous donne un exemple : 
+Paul est newser d'un site, il peut donc ajouter, modifier, et supprimer une news, ce qu'un utilisateur du site lambda ne peut PAS faire.
+Jean est un de ces utilisateurs lambda, et il aimerait pirater le site de Paul !  :pirate: Il va donc récupérer l'adresse permettant de supprimer une news, et envoyer un message privé à Paul contenant une image dont l'adresse sera celle de la page de suppression de news.
+
+Et là, le navigateur entre en jeu. En essayant d'afficher l'image, il va aller sur la page web permettant de supprimer la news et donc l'exécuter. Or, Paul était identifié en tant que newser, la news sera donc supprimée car <souligne><gras>IL</gras></souligne> a affiché la page.
+
+Sur le même principe, si Paul peut recevoir une requête ajax qui en s'exécutant va poster ou modifier une news !
+C'est-à-dire que Paul recevra un code javascript qui "forcera" le navigateur à appeler la page que le pirate veut que Paul exécute.
+
+On va donc apprendre à se protéger de ces failles très dangereuses, sachant qu'il n'existe pas de protection parfaite.
+
+Avant d'entrer dans le vif du sujet, je précise à toutes fins utiles que cette faille ne s'applique pas uniquement au cas que je présente dans ce tuto (c'est à dire le "piratage" d'un espace d'administration), mais peut-être utilisée dans de nombreux domaines où le but est de faire générer une requête par le navigateur de la victime (pour truquer des votes par exemple).]]>
+	</texte>
+      </souspartie>
+    
+      <souspartie id="125011">
+	<titre>
+	  <![CDATA[Le jeton de sécurité ou token]]>
+	</titre>
+	<texte>
+	  <![CDATA[Alors, pour commencer, voyons la protection la plus courante.  :) 
+Elle consiste à stocker un jeton unique (clairement une suite de nombres et de lettres) associé à la date d'affichage pour chaque visiteur qui affiche un formulaire dans une session, et ce même jeton dans un champ caché. Ceci permet que la personne qui tente d'exécuter la page est bien passée par le formulaire avant, où on lui a délivré le jeton.
+
+Ce qui donne :   
+<code type="php"><?php//On démarre les sessionssession_start();//On génére un jeton totalement unique (c'est capital :D)$token = uniqid(rand(), true);//Et on le stocke$_SESSION['token'] = $token;//On enregistre aussi le timestamp correspondant au moment de la création du token$_SESSION['token_time'] = time();//Maintenant, on affiche notre page normalement, le champ caché token en plus?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=utf-8" /><title>Mon formulaire anti CSRF</title></head><body><form id="form" name="form" method="post" action="traitement.php">  <p>Pseudo :     <label>      <input type="text" name="pseudo" id="pseudo" />    </label>  </p>  <p>E-mail :     <label>      <input type="text" name="email" id="email" />    </label>  </p>  <p>Nom :     <label>      <input type="text" name="nom" id="nom" />    </label>    <input type="hidden" name="token" id="token" value="<?php//Le champ caché a pour valeur le jetonecho $token;	?>"/>  </p>  <p>    <label>      <input type="submit" name="Envoyer" id="Envoyer" value="Envoyer" />    </label>  </p></form></body></html></code>
+
+Bon, jusque-là, c'est bon je pense... Les commentaires sont explicites. :soleil: 
+
+<erreur>Je rappelle que session_start() se place avant tout affichage, c'est souvent une cause d'erreurs inexpliquées. Vous pouvez outrepasser cette limitation grâce aux fonctions ob_, mais c'est moins propre.</erreur>
+Ensuite, on passe à la page du traitement, et vous vous rendrez compte qu'il est très simple de se protéger efficacement.
+
+On va déjà vérifier la présence du token, de sa date dans la session, et du token envoyé par POST. Donc, si la personne qui exécute la page n'est pas passée par le formulaire, ça bloque... 
+
+Le token doit aussi être valide, c'est-à-dire identique à celui envoyé par POST, et non-expiré, c'est-à-dire que sa génération ne remonte pas à trop longtemps.
+
+Puis on vérifie aussi si le token de $_POST est le même que celui de $_SESSION. Ce qui donne finalement : 
+<code type="php"><?phpsession_start();//On va vérifier ://Si le jeton est présent dans la session et dans le formulaireif(isset($_SESSION['token']) && isset($_SESSION['token_time']) && isset($_POST['token'])){	//Si le jeton de la session correspond à celui du formulaire	if($_SESSION['token'] == $_POST['token'])	{		//On stocke le timestamp qu'il était il y a 15 minutes		$timestamp_ancien = time() - (15*60);		//Si le jeton n'est pas expiré		if($_SESSION['token_time'] >= $timestamp_ancien)		{				//ON FAIT TOUS LES TRAITEMENTS ICI				//...				//...		}	}}//SINON, ON RAJOUTE DES ELSE ET DES MESSAGES D'ERREUR?></code>
+<information>Je vous conseille si vous utilisez cette méthode sur plusieurs scripts de nommer vos sessions pour ne pas confondre les jetons. Par exemple, $_SESSION['token_time'] devient $_SESSION['inscription_token_time'].</information>
+Voilà pour la protection de base. Suivez le guide, on va rentrer dans d'autres petites sécurités à mettre en place pour bien gêner le pirate.  :diable: 
+
+Évidemment, on peut utiliser un token pour des actions qui ne passent pas par un formulaire.
+Par exemple : sur une page ou l'administrateur peut supprimer des news, il y a plusieurs liens vers : supprimer_news.php?id=34
+
+Au lieu de transmettre le jeton par POST, on le transmet par GET, comme les autres données (en l'occurence l'ID de la news à supprimer). Le principe reste sinon le même, mais le POST est plus sûr.]]>
+	</texte>
+      </souspartie>
+    
+      <souspartie id="125022">
+	<titre>
+	  <![CDATA[Le referer]]>
+	</titre>
+	<texte>
+	  <![CDATA[On va donc poursuivre notre long chemin vers la vérité. ;) 
+
+Imaginons que le pirate fasse une injection CSRF et que, au moyen de requêtes AJAX, il fasse afficher à l'admin la page du formulaire puis la page du traitement... 
+
+Une requête AJAX, c'est un code Javascript qui s'exécute et qui appelle en arrière plan (c'est à dire que c'est invisible pour l'utilisateur) une page distante. Le javascript étant un langage client, c'est à dire exécuté par l'utilisateur et non par le serveur, le site qui reçoit la requête AJAX est appelé comme si l'utilisateur victime l'avait appelé consciemment. C'est donc un moyen de réaliser une attaquer CSRF. Je vous renvoie vers <lien url="http://www.siteduzero.com/tutoriel-3-4745-ajax-et-l-echange-de-donnees-en-javascript.html">ce tuto.</lien>
+
+Eh bien l'injection serait réussie :waw: , car le token aurait bien été généré par la page 1, et la vérification sera passée avec succès sur la page 2, sauf si vous vérifiez que la page qui a conduit le visiteur à la page de traitement est bien le formulaire, c'est à dire que le visiteur a cliqué sur un lien ou un bouton de la page 1 qui l'a directement conduit à la page 2.
+
+<question>On peut vraiment faire ça ?  :honte: </question>
+Oui, bien sûr, grâce à $_SERVER['HTTP_REFERER']. C'est une variable disponible n'importe où dans votre script sans rien à faire de particulier (comme toutes ses cousines $_SERVER['...']), et elle contient l'adresse, si elle existe, de la page qui a amené votre visiteur sur le script en cours.
+
+<erreur>ATTENTION : cette variable renvoie une adresse absolue, par exemple http://lesite.com/dossier1/url_a_rallonge.html, et non pas ../url_a_rallonge.html</erreur>
+Donc, on va rajouter un if qui vérifiera si cette variable est égale à la page formulaire.php, je vous laisse trouver ça tout seul (je sais, je suis cruel :diable: ).
+
+Ramassage des copies, et correction : <secret>
+<code type="php"><?phpsession_start();//On va vérifier ://Si le jeton est présent dans la session et dans le formulaireif(isset($_SESSION['token']) && isset($_SESSION['token_time']) && isset($_POST['token'])){	//Si le jeton de la session correspond à celui du formulaire	if($_SESSION['token'] == $_POST['token'])	{		//On stocke le timestamp qu'il était il y a 15 minutes		$timestamp_ancien = time() - (15*60);		//Si le jeton n'est pas expiré		if($_SESSION['token_time'] >= $timestamp_ancien)		{			//Si le referer est bon			if($_SERVER['HTTP_REFERER'] == 'http://monserveur.com/leformulaire.php')			{				//ON FAIT TOUS LES TRAITEMENTS ICI				//...				//...			}		}	}}//SINON, ON RAJOUTE DES ELSE ET DES MESSAGES D'ERREUR?></code></secret>
+
+Remplacez évidemment l'adresse du formulaire par la bonne. :) 
+
+<erreur>Le referer est envoyé par le navigateur du client, en d'autres termes il est très facile de le modifier ! Ne vous fiez donc pas à lui à 100%, ce n'est qu'une protection complémentaire.</erreur>
+Voilà, vous êtes déjà bien protégés, mais il y a encore quelques petites choses à voir... On continue!]]>
+	</texte>
+      </souspartie>
+    
+      <souspartie id="125025">
+	<titre>
+	  <![CDATA[Autres conseils]]>
+	</titre>
+	<texte>
+	  <![CDATA[<attention>Je vous rappelle qu'aucune protection n'est parfaite, mais que les pirates sont des feignants et donc s'ils doivent passer 50h avant de vous pirater, il vont chercher une autre victime !</attention>
+Donc, premièrement, passez le plus de données possibles en POST, ça oblige à monter une attaque avec des requêtes AJAX, puisque la technique de l'image (voir partie I) ne permet pas de passer des données en POST à la page appelée, mais seulement en GET (dans l'URL).
+De plus, la taille des URL est limitée à 255 caractères, donc ça fait pas lourd.
+Privilégiez le POST, mais avec discernement, pour passer un id dans l'URL, par exemple, <minicode type="html">profil.php?id_membre=1</minicode>, pas la peine d'utiliser POST, GET suffira bien.
+
+Ensuite, on a obligé le pirate à nous envoyer du code AJAX qui sera exécuté par l'administrateur. Hé, il me vient une idée, si on l'empêchait de le faire ? Allez, lançons-nous ! :magicien: 
+
+On va échapper les caractères HTML nécessaires par exemple le < et les ' " qui sont indispensables pour ce type d'attaque (ne soupirez pas, c'est plus que simplissime). La plupart de vous doit s'en douter, on va utiliser <gras>htmlspecialchars()</gras>. 
+
+<information>Vous utilisez peut-être déjà <gras>htmlentities()</gras>, sachez que c'est <gras>htmlspecialchars()</gras> + d'autres choses, donc ça convient très bien !
+</information>
+Il suffit donc de passer tout ce qui risque de contenir du code qui sera affiché à travers cette fonction, par exemple (vous pouvez changer le nom des variables  :D ): 
+<code type="php"><?php$chaine_securisee = htmlentities($chaine_a_risque);?></code>
+
+À la poursuite de la protection parfaite  :ange:  , vous pouvez aussi sur la page traitement demander une confirmation avant de valider l'action. Donc, à moins que le webmaster clique sur poursuivre, rien ne sera exécuté. Mais réservez cette technique aux points clés du site, parce que c'est très lourd ! 
+Dans le même ton, il est possible d'exiger une double connexion pour obtenir l'accès à la partie d'administration, comme dans certains forums PhPBB. Ainsi, on peut conserver une option de connexion automatique (bien pratique) sans risque, puisque si l'administrateur veut se connecter à l'administration, il devra se reconnecter. 
+
+Vous pouvez aussi sur le même principe demander avant une action critique de retaper le mot de passe.
+
+Enfin, je vous conseille de lire <lien url="http://www.siteduzero.com/tutoriel-3-31976-stocker-les-sessions-dans-votre-base-de-donnees.html">ce tuto</lien>, qui vous donnera des pistes pour contrer le vol de session, qui ici peut constituer une faille dans le système.
+
+Il existe donc de nombreux moyens de vous protéger, je ne les ai pas tous cités, et je vous invite donc à vous documenter, puisque le Web ne manque pas d'informations à ce sujet, et de jeter un coup d'oeil à la partie bonus ! L'idéal est de choisir une ou un ensemble de protections qui combinent praticité et efficacité, c'est à dire le compromis entre sécurité et ergonomie. Là, vous êtes les seuls juges.]]>
+	</texte>
+      </souspartie>
+    
+      <souspartie id="125033">
+	<titre>
+	  <![CDATA[Les bonus]]>
+	</titre>
+	<texte>
+	  <![CDATA[<titre2>Résumé de nos fonctions</titre2>
+Vous êtes encore là ? Très bien, pour vous féliciter de votre persévérance, je vous ai récapitulé tout le code, évidemment, à vous de l'adapter à vos besoins.
+
+Voici donc 2 petites fonctions qui récapitulent les principales protections, pour les explications référez-vous aux commentaires : 
+<code type="php"><?php//Cette fonction génère, sauvegarde et retourne un token//Vous pouvez lui passer en paramètre optionnel un nom pour différencier les formulairesfunction generer_token($nom = ''){	session_start();	$token = uniqid(rand(), true);	$_SESSION[$nom.'_token'] = $token;	$_SESSION[$nom.'_token_time'] = time();	return $token;}//**************************************************************************////**************************************************************************////**************************************************************************////Cette fonction vérifie le token//Vous passez en argument le temps de validité (en secondes)//Le referer attendu (adresse absolue, rappelez-vous :D)//Le nom optionnel si vous en avez défini un lors de la création du tokenfunction verifier_token($temps, $referer, $nom = ''){session_start();if(isset($_SESSION[$nom.'_token']) && isset($_SESSION[$nom.'_token_time']) && isset($_POST['token']))	if($_SESSION[$nom.'_token'] == $_POST['token'])		if($_SESSION[$nom.'_token_time'] >= (time() - $temps))			if($_SERVER['HTTP_REFERER'] == $referer)				return true;return false;}?></code>
+
+Bon, je vous donne quand même un exemple d'utilisation mes chers Zéros. Voici la page du formulaire : 
+<code type="php"><?php$token = generer_token('forum');//Ensuite, le formulaire normal, pensez au champ caché. ;)?></code> 
+
+Et voici la page de traitement : 
+<code type="php"><?phpif(verifier_token(600, 'http://test.fr/formulaire.php', 'forum')){	//TRAITEMENTS	//..	//..}else{	//ERREUR	}?></code>
+
+<question>Mais pourquoi met-on if(verifier_token(...)) ? Ça n'a aucun sens ? </question>
+Eh bien si : la fonction renvoie true si le token est valide, et false s'il est invalide, ce qui donne : 
+Si le token est validé : if(true), ce qui équivaut à "si vrai", donc la condition est vérifiée
+Sinon, c'est if(false), si faux, condition non valide, on exécute le else.
+
+<titre2>Pour approfondir</titre2>
+
+Si vous voulez en apprendre plus, je vous conseille les sites suivants : 
+<liste><puce><lien type="wikipedia" url="Cross-site_request_forgery">Wikipédia</lien></puce><puce><lien url="http://www.xmcopartners.com/article-attaque-CSRF.html">XMCOPartners(audit informatique)</lien></puce><puce><lien url="http://www.mti.epita.fr/blogs/2009/03/07/securiser-son-site-web-33-attaque-de-type-csrf/">MTI</lien></puce>Il est aussi intéressant de voir comment les grands scripts open-source (PhPBB, Joomla, etc.) se protègent de ce genre d'attaques. Les parades qu'ils déploient sont réfléchies par toute une communauté, ça les rend donc efficaces.Enfin, j'attire votre attention sur le fait que certains frameworks facilitent la gestion de la sécurité, nativement ou avec des modules, comme <lien url="http://guides.rubyonrails.org/security.html">Ruby on Rails</lien>, <lien url="http://docs.djangoproject.com/en/dev/ref/contrib/csrf/?from=olddocs">Django</lien>, etc.</liste>
+Voilà, c'est fini !  :'(]]>
+	</texte>
+      </souspartie>
+    
+  </sousparties>
+  
+    <qcm>
+      
+	<question id="9360">
+	  <label>
+	    <![CDATA[Qu'est-ce qu'une faille CSRF?]]>
+	  </label>
+	  <reponses>
+	    
+	      <reponse vrai="0" id="33121">
+		<![CDATA[Un trou dans le CSRF]]>
+	      </reponse>
+	    
+	      <reponse vrai="1" id="33122">
+		<![CDATA[Une faille de sécurité permettant à un pirate de faire faire à un admin ce qu'il veut]]>
+	      </reponse>
+	    
+	      <reponse vrai="0" id="33123">
+		<![CDATA[Un erreur dans PHP qui compromet la sécurité]]>
+	      </reponse>
+	    
+	      <reponse vrai="0" id="33124">
+		<![CDATA[Un token non-généré]]>
+	      </reponse>
+	    
+	  </reponses>
+	  <explication>
+	    <![CDATA[C'est bien sûr la deuxième réponse, relisez la première partie si vous vous êtes trompé !]]>
+	  </explication>
+	</question>
+      
+	<question id="9361">
+	  <label>
+	    <![CDATA[Qu'est ce qu'un token?]]>
+	  </label>
+	  <reponses>
+	    
+	      <reponse vrai="1" id="33125">
+		<![CDATA[Un jeton de sécurité unique]]>
+	      </reponse>
+	    
+	      <reponse vrai="0" id="33126">
+		<![CDATA[Un champ caché particulier]]>
+	      </reponse>
+	    
+	      <reponse vrai="0" id="33127">
+		<![CDATA[Ça n'existe pas]]>
+	      </reponse>
+	    
+	  </reponses>
+	  <explication>
+	    <![CDATA[Le champ caché sert uniquement, au même titre qu'une SESSION à stocker le token !]]>
+	  </explication>
+	</question>
+      
+	<question id="9362">
+	  <label>
+	    <![CDATA[Le referer est-il totalement sûr ?]]>
+	  </label>
+	  <reponses>
+	    
+	      <reponse vrai="1" id="33128">
+		<![CDATA[Non, car il est facilement modifiable]]>
+	      </reponse>
+	    
+	      <reponse vrai="0" id="33129">
+		<![CDATA[Oui, car c'est le serveur qui le délivre]]>
+	      </reponse>
+	    
+	      <reponse vrai="0" id="33130">
+		<![CDATA[Non, car il se peut que le referer "bug"]]>
+	      </reponse>
+	    
+	      <reponse vrai="0" id="33131">
+		<![CDATA[Aucune idée]]>
+	      </reponse>
+	    
+	  </reponses>
+	  <explication>
+	    <![CDATA[Le pirate peut effectivement modifier très facilement son referer, rappelez-vous que NTUI (ne jamais croire les données venant de l'utilisateur), or le referer en fait partie.]]>
+	  </explication>
+	</question>
+      
+    </qcm>
+  
+  <conclusion>
+    <![CDATA[Vous avez appris à vous protéger contre un type de faille assez méconnu chez les débutants. N'hésitez pas à poster un commentaire si vous avez un problème, j'y répondrai, mais pas MP par contre. ;)
+
+Avant de nous quitter, je tiens à remercier les différents Zér0s qui m'ont aidé par leurs commentaires à ajouter, modifier et améliorer certains points du tuto. Je vous encourage aussi à me faire part de vos commentaires, pour pouvoir avancer. ;)
+
+Enfin, je précise, pour éviter les critiques acerbes de certains, que ce tutoriel n'est qu'une <italique>introduction </italique> aux failles CSRF. Il ne les traite pas exhaustivement, l'intérêt étant surtout d'attirer l'attention des webmestres débutants sur le fait qu'il existe des failles très dangereuses auxquelles on ne pense pas immédiatement, CSRF en étant un bon exemple.
+
+Merci de votre lecture, à bientôt!]]>
+  </conclusion>
+</minituto>

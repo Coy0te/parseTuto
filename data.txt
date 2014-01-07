@@ -1,0 +1,40 @@
+Lorsqu"un utilisateur consulte un site > 3, ce qui se passe derrière les rideaux est un simple échange entre un client et un serveur (voir la figure suivante).
+
+<liste>	
+<puce><gras>le client</gras> : dans la plupart des cas, c'est le navigateur installé sur votre ordinateur. Retenez que ce n'est pas le seul moyen d'accéder au web, mais c'est celui qui nous intéresse dans ce cours.</puce>	
+<puce><gras>le serveur</gras> : c'est la machine sur laquelle le site est hébergé, où les fichiers sont stockés et les pages web générées.</puce>
+</liste>
+
+<position valeur="centre"><image legende="Echange dynamique client <-> serveur" legendevisible="oui">http://uploads.siteduzero.com/files/369001_370000/369034.png</image>
+</position>
+<position>test sans param</position>
+
+
+La communication qui s'effectue entre le client et le serveur est régie par des règles bien définies : le <gras>protocole HTTP</gras> (voir la figure suivante). Entrons donc un peu plus dans le détail, et regardons de quoi est constitué un échange simple :
+<liste type="1"><puce>l'utilisateur saisit une URL dans la barre d'adresses de son navigateur ;
+<liste>
+   <puce>test A ;</puce>
+<puce>test B.</puce>  
+ </liste>
+</puce>	
+<puce>le navigateur envoie alors une <gras>  requête HTTP</gras> au serveur pour lui demander <minicode>bip(bip);</minicode> la page correspondante ;</puce>	
+<puce>le serveur reçoit cette requête, l'interprète et génère alors une page web qu'il va renvoyer au client par le biais d'une <gras>réponse HTTP</gras> ;</puce>	
+<puce>le navigateur reçoit, via cette réponse, la page web finale, qu'il affiche alors à l'utilisateur.</puce></liste>
+<position valeur="droite"><image legende="Echange dynamique HTTP client <-> serveur" legendevisible="oui">http://uploads.siteduzero.com/files/369001_370000/369037.png</image></position>
+
+Ce qu'il faut comprendre et retenir de tout ça :
+<liste>	
+<puce>les données sont échangées entre le client et le serveur via le <lien type="wikipedia" url="Hypertext_Transfer_Protocol">protocole HTTP</lien> ;</puce>	
+<puce>le client ne comprend que les langages de présentation de l'information, en d'autres termes les technologies HTML, CSS et Javascript ;
+<liste type="54">
+<puce>test A ;
+<liste>
+<puce>test 12 ;</puce>
+<puce>test 12.</puce>  
+ </liste>
+</puce>
+<puce>test B.</puce>
+</liste>
+</puce>	
+<puce>les pages sont générées sur le serveur de manière dynamique, à partir du code source du site.</puce>
+</liste>

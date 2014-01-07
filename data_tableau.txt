@@ -1,0 +1,58 @@
+<tableau>      
+<legende>Ici c'est la légende du tableau, c'est la fête issi.</legende>                  
+<ligne>
+<entete>Catégorie</entete>
+<entete>Identifiant</entete>
+<entete>Description</entete>
+</ligne>
+<ligne>    
+<cellule>JSP</cellule>    
+<cellule><gras>pageContext</gras></cellule>    
+<cellule>Objet contenant des informations sur l'environnement du serveur.</cellule>  
+</ligne>
+<ligne>    
+<cellule fusion_lig="4">Portées</cellule>    
+<cellule><gras>pageScope</gras></cellule>    
+<cellule>Une <minicode type="java">Map</minicode> qui associe les noms et valeurs des attributs ayant pour portée la page.</cellule>  
+</ligne>
+<ligne>    
+<cellule><gras>requestScope</gras></cellule>    
+<cellule>Une <minicode type="java">Map</minicode> qui associe les noms et valeurs des attributs ayant pour portée la requête.</cellule>  
+</ligne>
+<ligne>    
+<cellule><gras>sessionScope</gras></cellule>    
+<cellule>Une <minicode type="java">Map</minicode> qui associe les noms et valeurs des attributs ayant pour portée la session.</cellule>  
+</ligne>
+<ligne>    
+<cellule><gras>applicationScope</gras></cellule>    
+<cellule>Une <minicode type="java">Map</minicode> qui associe les noms et valeurs des attributs ayant pour portée l'application.</cellule>  
+</ligne>
+<ligne>    
+<cellule fusion_lig="2">Paramètres de requête</cellule>    
+<cellule><gras>param</gras></cellule>    
+<cellule>Une <minicode type="java">Map</minicode> qui associe les noms et valeurs des paramètres de la requête.</cellule>  
+</ligne>
+<ligne>    
+<cellule><gras>paramValues</gras></cellule>    
+<cellule>Une <minicode type="java">Map</minicode> qui associe les noms et multiples valeurs <gras>**</gras> des paramètres de la requête sous forme de tableaux de String.</cellule>  
+</ligne>
+<ligne>    
+<cellule fusion_lig="2">En-têtes de requête</cellule>    
+<cellule><gras>header</gras></cellule>    
+<cellule>Une <minicode type="java">Map</minicode> qui associe les noms et valeurs des paramètres des en-têtes HTTP.</cellule>  
+</ligne>
+<ligne>    
+<cellule><gras>headerValues</gras></cellule>    
+<cellule>Une <minicode type="java">Map</minicode> qui associe les noms et multiples valeurs <gras>**</gras> des paramètres des en-têtes HTTP sous forme de tableaux de String.</cellule>  
+</ligne>
+<ligne>    
+<cellule>Cookies</cellule>    
+<cellule><gras>cookie</gras></cellule>    
+<cellule>Une <minicode type="java">Map</minicode> qui associe les noms et instances des cookies.</cellule>  
+</ligne>
+<ligne>    
+<cellule>Paramètres d’initialisation</cellule>    
+<cellule><gras>initParam</gras></cellule>    
+<cellule>Une <minicode type="java">Map</minicode> qui associe les données contenues dans les champs <minicode type="zcode"><param-name></minicode> et <minicode type="zcode"><param-value></minicode> de la section <minicode type="zcode"><init-param></minicode> du fichier web.xml.</cellule>  
+</ligne>
+</tableau>
