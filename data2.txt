@@ -105,8 +105,7 @@ Par ailleurs, si vous regardez attentivement le code ci-dessus, vous constaterez
 <entete>Description</entete>
 </ligne>
 <ligne>	
-<cellule><gras>pageContext</gras></cellule>	
-<cellule><minicode type="java">PageContext</minicode></cellule>	
+<cellule fusion_col="2"><gras>pageContext</gras> <minicode type="java">PageContext</minicode></cellule>	
 <cellule>Il fournit des informations utiles relatives au contexte d'exécution. Entre autres, il permet d'accéder aux attributs présents dans les différentes portées de l'application. Il contient également une référence vers tous les objets implicites suivants.</cellule>
 </ligne>
 <ligne>	
@@ -195,13 +194,11 @@ ayant pour portée la session.</cellule>
 ayant pour portée l'application.</cellule>  
 </ligne>
 <ligne>    
-<cellule fusion_lig="2">Paramètres de requête</cellule>    
-<cellule><gras>param</gras></cellule>    
+<cellule fusion_lig="2" fusion_col="2">Paramètres de requête</cellule>    
 <cellule>Une <minicode type="java">Map</minicode> qui associe les noms et valeurs des paramètres 
 de la requête.</cellule>  
 </ligne>
 <ligne>    
-<cellule><gras>paramValues</gras></cellule>    
 <cellule>Une <minicode type="java">Map</minicode> qui associe les noms et multiples valeurs <gras>**</gras> des paramètres 
 de la requête sous forme de tableaux de String.</cellule>  
 </ligne>

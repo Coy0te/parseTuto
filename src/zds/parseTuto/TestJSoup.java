@@ -6,9 +6,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -20,14 +18,13 @@ import org.jsoup.nodes.Element;
 import org.jsoup.nodes.Entities.EscapeMode;
 import org.jsoup.nodes.TextNode;
 import org.jsoup.parser.Parser;
+import org.jsoup.select.Elements;
 
 import com.bethecoder.ascii_table.ASCIITable;
 
 public class TestJSoup {
-    private static final Pattern code               = Pattern.compile( "(<code([^>]*?)>)(.+?)(</code>)", Pattern.DOTALL );
-    private static final Pattern minicode           = Pattern.compile( "(<minicode([^>]*?)>)(.+?)(</minicode>)", Pattern.DOTALL );
-
-    private static List<String>  listeFichiersTutos = new ArrayList<String>();
+    private static final Pattern code     = Pattern.compile( "(<code([^>]*?)>)(.+?)(</code>)", Pattern.DOTALL );
+    private static final Pattern minicode = Pattern.compile( "(<minicode([^>]*?)>)(.+?)(</minicode>)", Pattern.DOTALL );
 
     public static void main( String[] args ) throws FileNotFoundException, UnsupportedEncodingException {
         // Nom du fichier de sortie généré après la conversion
@@ -44,11 +41,11 @@ public class TestJSoup {
     /*
      * Méthode de conversion de toutes les balises du zCode vers leur équivalent en syntaxe markdown. S'appuie sur le parseur HTML JSoup.
      * 
-     * Les multiples appels à JSoup.parse() sont effectués afin de traiter correctement les balises imbriquées : sans ce retour à zéro
-     * systématique, le parseur n'agirait pas sur les contenus déjà parsés dans une boucle antérieure.
+     * Les multiples appels à JSoup.parse() sont effectués afin de traiter correctement les balises imbriquées : sans ce retour à zéro systématique,
+     * le parseur n'agirait pas sur les contenus déjà parsés dans une boucle antérieure.
      * 
-     * Les appels à escapeHtmlContent() sont systématiques eux-aussi, pour éviter que le parseur ne vienne fourrer son nez dans le contenu
-     * des balises <code> et <minicode> à chaque nouveau parsage.
+     * Les appels à escapeHtmlContent() sont systématiques eux-aussi, pour éviter que le parseur ne vienne fourrer son nez dans le contenu des balises
+     * <code> et <minicode> à chaque nouveau parsage.
      * 
      * Malgré la conception baclée et les multiples itérations, les perfs sont très bonnes en comparaison à des traitements par regex. =)
      */
@@ -67,8 +64,7 @@ public class TestJSoup {
                 elt.replaceWith( TextNode.createFromEncoded( " [" + elt.html() + "](" + "http://php.net/"
                         + elt.attr( "url" ) + ") ", "" ) );
             } else if ( elt.hasAttr( "doc" ) && elt.attr( "doc" ).equals( "php" ) ) {
-                // TODO: vérifier que elt.text() ressort bien uniquement le nom de la méthode php, et pas les éventuelles balises zCode
-                // autour
+                // TODO: vérifier que elt.text() ressort bien uniquement le nom de la méthode php, et pas les éventuelles balises zCode autour
                 elt.replaceWith( TextNode.createFromEncoded( " [" + elt.html() + "](" + "http://php.net/" + elt.text()
                         + ") ", "" ) );
             } else if ( elt.hasAttr( "type" ) && elt.attr( "type" ).equals( "wikipedia" ) &&
@@ -369,6 +365,62 @@ public class TestJSoup {
         document.outputSettings().escapeMode( EscapeMode.none );
         document.outputSettings().charset( "UTF-8" );
 
+        // nettoyage colspan <tableau>
+        for ( Element tableau : document.select( "tableau" ) ) {
+            for ( Element ligne : tableau.getElementsByTag( "ligne" ) ) {
+                for ( Element cellule : ligne.children() ) {
+                    if ( cellule.hasAttr( "fusion_col" ) ) {
+                        int xspan = Integer.valueOf( cellule.attr( "fusion_col" ) );
+                        cellule.removeAttr( "fusion_col" );
+                        for ( int i = 1; i < xspan; i++ ) {
+                            cellule.after( cellule.clone() );
+                        }
+                    }
+                }
+            }
+        }
+
+        document = Jsoup.parse( escapeHtmlContent( document.toString() ), "", Parser.xmlParser() );
+        document.outputSettings().prettyPrint( false );
+        document.outputSettings().escapeMode( EscapeMode.none );
+        document.outputSettings().charset( "UTF-8" );
+
+        // nettoyage rowspan <tableau>
+        for ( Element tableau : document.select( "tableau" ) ) {
+            Element ligne;
+            for ( int l = 0; l < tableau.getElementsByTag( "ligne" ).size(); l++ ) {
+                ligne = tableau.getElementsByTag( "ligne" ).get( l );
+                Element cellule;
+                for ( int c = 0; c < ligne.children().size(); c++ ) {
+                    cellule = ligne.children().get( c );
+                    if ( cellule.hasAttr( "fusion_lig" ) ) {
+                        System.out.println( "YOUPI! " + cellule.html() );
+                        int yspan = Integer.valueOf( cellule.attr( "fusion_lig" ) );
+                        cellule.removeAttr( "fusion_lig" );
+                        for ( int i = l + 1; i < l + yspan; i++ ) {
+                            if ( c > 0 ) {
+                                tableau.getElementsByTag( "ligne" ).get( i ).children().get( c - 1 )
+                                        .after( cellule.clone() );
+                            } else {
+                                tableau.getElementsByTag( "ligne" ).get( i ).children().get( c )
+                                        .before( cellule.clone() );
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        document = Jsoup.parse( escapeHtmlContent( document.toString() ), "", Parser.xmlParser() );
+        document.outputSettings().prettyPrint( false );
+        document.outputSettings().escapeMode( EscapeMode.none );
+        document.outputSettings().charset( "UTF-8" );
+
+        // TODO : y'a deux gros tarés qu'ont fait un tableau avec... deux lignes d'en-têtes ! C'est des hérétiques, et faudra penser à repasser sur
+        // leur tuto parce que ça va pas bien marcher pour eux :
+        // - maitrisez-les-nombres-a-virgule-en-c.tuto
+        // - la-chimie-a-partir-de-zero.tuto
+
         // conversion <tableau>
         for ( Element tableau : document.select( "tableau" ) ) {
             String legendeTableau = "";
@@ -376,44 +428,74 @@ public class TestJSoup {
                 legendeTableau = tableau.getElementsByTag( "legende" ).get( 0 ).text();
                 tableau.getElementsByTag( "legende" ).get( 0 ).remove();
             }
-            List<String> entetes = new ArrayList<String>();
-            Map<Integer, List<String>> cellules = new HashMap<Integer, List<String>>();
 
-            int indexLigne = 0;
-            for ( Element ligne : tableau.children() ) {
-                if ( ligne.nodeName().equals( "ligne" ) ) {
-                    List<String> cellulesLigne = new ArrayList<String>();
-                    for ( Element cellule : ligne.children() ) {
-                        if ( cellule.nodeName().equals( "entete" ) ) {
-                            entetes.add( cellule.html() );
-                        } else {
-                            if ( cellule.hasAttr( "fusion_lig" ) ) {
-                                // What to do? même pb pour fusion_col...
-                                cellulesLigne.add( cellule.html() );
-                            } else {
-                                cellulesLigne.add( cellule.html() );
-                            }
-                        }
-                    }
-                    if ( !cellulesLigne.isEmpty() ) {
-                        cellules.put( indexLigne, cellulesLigne );
-                        indexLigne++;
-                    }
+            int largeurTableau = 0;
+            // on calcule la largeur du tableau en se basant sur sa première ligne
+            int i = 0;
+            Elements cellules = tableau.getElementsByTag( "ligne" ).first().getElementsByTag( "cellule" );
+            while ( cellules.isEmpty() ) {
+                i++;
+                cellules = tableau.getElementsByTag( "ligne" ).get( i ).getElementsByTag( "cellule" );
+            }
+            System.out.println( String.format( "YOUHOU, ligne contenant %d colonnes.", cellules.size() ) );
+            largeurTableau = cellules.size();
+
+            int hauteurTableau = tableau.getElementsByTag( "ligne" ).size();
+
+            // par défaut, on considère qu'il n'y a pas d'en-têtes
+            String[] header = new String[0];
+            // si des en-tête sont définies, on initialise l'array header[]
+            if ( !tableau.getElementsByTag( "entete" ).isEmpty() ) {
+                header = new String[largeurTableau];
+                hauteurTableau--;
+            }
+
+            String[][] data = new String[hauteurTableau][largeurTableau];
+
+            for ( int k = 0; k < hauteurTableau; k++ )
+                for ( int j = 0; j < largeurTableau; j++ )
+                    data[k][j] = "";
+
+            i = 0;
+            cellules = tableau.getElementsByTag( "ligne" ).first().getElementsByTag( "entete" );
+            while ( cellules.isEmpty() && i < tableau.getElementsByTag( "ligne" ).size() ) {
+                cellules = tableau.getElementsByTag( "ligne" ).get( i ).getElementsByTag( "entete" );
+                i++;
+            }
+
+            if ( !cellules.isEmpty() ) {
+                System.out.println( "Tableau avec en-têtes" );
+                i = 0;
+                for ( Element cellule : cellules ) {
+                    header[i] = cellule.html();
+                    System.out.println( String.format( "header[%d] = %s", i, header[i] ) );
+                    i++;
+
                 }
             }
 
-            String[] header = entetes.toArray( new String[entetes.size()] );
-            String[][] data = new String[cellules.size()][entetes.size()];
-            for ( int i = 0; i < cellules.size(); i++ ) {
-                data[i] = cellules.get( i ).toArray( new String[cellules.get( i ).size()] );
+            int indexLigne = 0;
+            for ( Element ligne : tableau.getElementsByTag( "ligne" ) ) {
+                cellules = ligne.getElementsByTag( "cellule" );
+                if ( !cellules.isEmpty() ) {
+                    i = 0;
+                    for ( Element cellule : cellules ) {
+                        data[indexLigne][i] = cellule.html();
+                        System.out.println( String.format( "data[%d][%d] = %s", indexLigne, i, data[indexLigne][i] ) );
+                        i++;
+                    }
+                    indexLigne++;
+                }
             }
-            // DEBUG: affichage des tableaux ascii dans la console
-            // TODO : les sauts de lignes cassent le tableau
+
+            System.out.println( "Tableau: " + hauteurTableau + "x" + largeurTableau );
+
+            // DEBUG: affichage des tableaux dans la console
             ASCIITable.getInstance().printTable( header, data );
 
             if ( !"".equals( legendeTableau ) ) {
-                tableau.replaceWith( new DataNode( "\n" + ASCIITable.getInstance().getTable( header, data )
-                        + "Table:" + legendeTableau + "\n", "" ) );
+                tableau.replaceWith( new DataNode( "\n" + ASCIITable.getInstance().getTable( header, data ) + "Table:"
+                        + legendeTableau + "\n", "" ) );
             } else {
                 tableau.replaceWith( new DataNode( "\n" + ASCIITable.getInstance().getTable( header, data ) + "\n", "" ) );
             }
@@ -530,22 +612,9 @@ public class TestJSoup {
     }
 
     /*
-     * Méthode helper pour le listage des fichiers d'un répertoire.
-     */
-    public static void listFilesForFolder( final File folder ) {
-        for ( final File fileEntry : folder.listFiles() ) {
-            if ( fileEntry.isDirectory() ) {
-                listFilesForFolder( fileEntry );
-            } else {
-                listeFichiersTutos.add( fileEntry.getName() );
-            }
-        }
-    }
-
-    /*
-     * Méthode d'échappement des chevrons < et > contenus au sein des sections <code> et <minicode>, pour que JSoup ne cherche pas à
-     * corriger les balises HTML-like non fermées qu'elles peuvent éventuellement contenir (exemple : sans ce traitement, le code Java
-     * "List<String>" deviendrait "List<string></string>" ...).
+     * Méthode d'échappement des chevrons < et > contenus au sein des sections <code> et <minicode>, pour que JSoup ne cherche pas à corriger les
+     * balises HTML-like non fermées qu'elles peuvent éventuellement contenir (exemple : sans ce traitement, le code Java "List<String>" deviendrait
+     * "List<string></string>" ...).
      */
     public static String escapeHtmlContent( String contenu ) {
         Matcher matcher = code.matcher( contenu );
