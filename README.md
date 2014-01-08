@@ -22,7 +22,7 @@ Elle est commentée, il suffit de l'exécuter (sous Eclipse, Run As > Java App) 
 
 Les tableaux ne sont pas entièrement gérés :
 - un saut de ligne dans une cellule casse la mise en forme markdown du tableau
-- les attributs de cellule `rowspan` et `colspan` ne sont pas bien gérés, pour le moment le contenu d'un cellule spannée est dupliqué dans sa version splitée.
+- les attributs de cellule `rowspan` et `colspan` ne sont pas bien gérés, pour le moment le contenu d'une cellule spannée est dupliqué dans sa version splitée.
 
 A priori, pas d'autre bug.
 
