@@ -167,7 +167,7 @@ public class TestJSoup {
 
         // conversion <video>
         for ( Element elt : document.select( "video" ) ) {
-            elt.replaceWith( TextNode.createFromEncoded( "![video](" + elt.html() + ")", "" ) );
+            elt.replaceWith( TextNode.createFromEncoded( elt.html(), "" ) );
         }
 
         document = Jsoup.parse( escapeMarkdownHtmlContent( document.toString() ), "", Parser.xmlParser() );
