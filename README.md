@@ -1,7 +1,7 @@
 parseTuto
 =========
 
-Prototype de parseur zCode -> markdown.
+Parseur zCode -> markdown.
 
 
 # Technos
