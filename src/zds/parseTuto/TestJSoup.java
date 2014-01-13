@@ -1,15 +1,19 @@
 package zds.parseTuto;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.io.UnsupportedEncodingException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
+import java.util.ListIterator;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.xpath.XPathExpressionException;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.DataNode;
@@ -19,31 +23,116 @@ import org.jsoup.nodes.Entities.EscapeMode;
 import org.jsoup.nodes.TextNode;
 import org.jsoup.parser.Parser;
 import org.jsoup.select.Elements;
-
-import com.bethecoder.ascii_table.ASCIITable;
+import org.xml.sax.SAXException;
 
 public class TestJSoup {
-    public static void main( String[] args ) throws FileNotFoundException, UnsupportedEncodingException {
-        // Nom du fichier de sortie généré après la conversion
-        PrintWriter writer = new PrintWriter( "data_markdowned.md", "UTF-8" );
+    private static List<String> listeFichiersTutos = new ArrayList<String>();
+    private static final String FOLDER_TUTO_ENTER  = "/Users/gaowenjia/work/tuto_devock/";
+    private static final String FOLDER_TUTO_EXIT   = "/Users/gaowenjia/work/tuto_devock/parsed/";
 
-        // Nom du fichier source à convertir
-        String contenu = readFile( "data2.txt" );
+    public static void main( String[] args ) throws SAXException, IOException, ParserConfigurationException,
+            XPathExpressionException {
+        File folder = new File( FOLDER_TUTO_ENTER );
+        PrintWriter writer;
+        listFilesForFolder( folder );
 
-        contenu = cleanZcodeSource( contenu );
-        contenu = zCodeToMarkdown( contenu );
-        writer.println( contenu );
-        writer.close();
+        for ( String fileStr : listeFichiersTutos ) {
+            String contenu = readFile( FOLDER_TUTO_ENTER + fileStr );
+
+            Document document = Jsoup.parse( escapeZcodeHtmlContent( contenu ), "", Parser.xmlParser() );
+            document.outputSettings().prettyPrint( false );
+            document.outputSettings().escapeMode( EscapeMode.none );
+            document.outputSettings().charset( "UTF-8" );
+
+            // introduction
+            String buffer;
+            for ( Element elt : document.select( "introduction" ) ) {
+                buffer = cleanZcodeSource( elt.html() );
+                buffer = zCodeToMarkdown( buffer );
+                elt.replaceWith( new DataNode( "<introduction><![CDATA[" + buffer + "]]></introduction>", "" ) );
+            }
+
+            document = Jsoup.parse( escapeMarkdownHtmlContent( escapeZcodeHtmlContent( document.toString() ) ), "",
+                    Parser.xmlParser() );
+            document.outputSettings().prettyPrint( false );
+            document.outputSettings().escapeMode( EscapeMode.none );
+            document.outputSettings().charset( "UTF-8" );
+
+            // conclusion
+            for ( Element elt : document.select( "conclusion" ) ) {
+                buffer = cleanZcodeSource( elt.html() );
+                buffer = zCodeToMarkdown( buffer );
+                elt.replaceWith( new DataNode( "<conclusion><![CDATA[" + buffer + "]]></conclusion>", "" ) );
+            }
+
+            document = Jsoup.parse( escapeMarkdownHtmlContent( escapeZcodeHtmlContent( document.toString() ) ), "",
+                    Parser.xmlParser() );
+            document.outputSettings().prettyPrint( false );
+            document.outputSettings().escapeMode( EscapeMode.none );
+            document.outputSettings().charset( "UTF-8" );
+
+            // texte
+            for ( Element elt : document.select( "texte" ) ) {
+                buffer = cleanZcodeSource( elt.html() );
+                buffer = zCodeToMarkdown( buffer );
+                elt.replaceWith( new DataNode( "<texte><![CDATA[" + buffer + "]]></texte>", "" ) );
+            }
+
+            document = Jsoup.parse( escapeMarkdownHtmlContent( escapeZcodeHtmlContent( document.toString() ) ), "",
+                    Parser.xmlParser() );
+            document.outputSettings().prettyPrint( false );
+            document.outputSettings().escapeMode( EscapeMode.none );
+            document.outputSettings().charset( "UTF-8" );
+
+            // label
+            for ( Element elt : document.select( "label" ) ) {
+                buffer = cleanZcodeSource( elt.html() );
+                buffer = zCodeToMarkdown( buffer );
+                elt.replaceWith( new DataNode( "<label><![CDATA[" + buffer + "]]></label>", "" ) );
+            }
+
+            document = Jsoup.parse( escapeMarkdownHtmlContent( escapeZcodeHtmlContent( document.toString() ) ), "",
+                    Parser.xmlParser() );
+            document.outputSettings().prettyPrint( false );
+            document.outputSettings().escapeMode( EscapeMode.none );
+            document.outputSettings().charset( "UTF-8" );
+
+            // reponse
+            for ( Element elt : document.select( "reponse" ) ) {
+                buffer = cleanZcodeSource( elt.html() );
+                buffer = zCodeToMarkdown( buffer );
+                elt.replaceWith( new DataNode( "<reponse><![CDATA[" + buffer + "]]></reponse>", "" ) );
+            }
+
+            document = Jsoup.parse( escapeMarkdownHtmlContent( escapeZcodeHtmlContent( document.toString() ) ), "",
+                    Parser.xmlParser() );
+            document.outputSettings().prettyPrint( false );
+            document.outputSettings().escapeMode( EscapeMode.none );
+            document.outputSettings().charset( "UTF-8" );
+
+            // explication
+            for ( Element elt : document.select( "explication" ) ) {
+                buffer = cleanZcodeSource( elt.html() );
+                buffer = zCodeToMarkdown( buffer );
+                elt.replaceWith( new DataNode( "<explication><![CDATA[" + buffer + "]]></explication>", "" ) );
+            }
+
+            // Nom du fichier de sortie généré après la conversion
+            writer = new PrintWriter( FOLDER_TUTO_EXIT + fileStr, "UTF-8" );
+            writer.println( document.toString() );
+            writer.close();
+        }
+
     }
 
     /*
      * Méthode de conversion de toutes les balises du zCode vers leur équivalent en syntaxe markdown. S'appuie sur le parseur HTML JSoup.
      * 
-     * Les multiples appels à JSoup.parse() sont effectués afin de traiter correctement les balises imbriquées : sans ce retour à zéro systématique,
-     * le parseur n'agirait pas sur les contenus déjà parsés dans une boucle antérieure.
+     * Les multiples appels à JSoup.parse() sont effectués afin de traiter correctement les balises imbriquées : sans ce retour à zéro
+     * systématique, le parseur n'agirait pas sur les contenus déjà parsés dans une boucle antérieure.
      * 
-     * Les appels à escapeHtmlContent() sont systématiques eux-aussi, pour éviter que le parseur ne vienne fourrer son nez dans le contenu des balises
-     * <code> et <minicode> à chaque nouveau parsage.
+     * Les appels à escapeHtmlContent() sont systématiques eux-aussi, pour éviter que le parseur ne vienne fourrer son nez dans le contenu
+     * des balises <code> et <minicode> à chaque nouveau parsage.
      * 
      * Malgré la conception baclée et les multiples itérations, les perfs sont très bonnes en comparaison à des traitements par regex. =)
      */
@@ -62,7 +151,8 @@ public class TestJSoup {
                 elt.replaceWith( TextNode.createFromEncoded( "[" + elt.html() + "](" + "http://php.net/"
                         + elt.attr( "url" ) + ")", "" ) );
             } else if ( elt.hasAttr( "doc" ) && elt.attr( "doc" ).equals( "php" ) ) {
-                // TODO: vérifier que elt.text() ressort bien uniquement le nom de la méthode php, et pas les éventuelles balises zCode autour
+                // TODO: vérifier que elt.text() ressort bien uniquement le nom de la méthode php, et pas les éventuelles balises zCode
+                // autour
                 elt.replaceWith( TextNode.createFromEncoded( "[" + elt.html() + "](" + "http://php.net/" + elt.text()
                         + ")", "" ) );
             } else if ( elt.hasAttr( "type" ) && elt.attr( "type" ).equals( "wikipedia" ) &&
@@ -98,12 +188,14 @@ public class TestJSoup {
 
         // conversion <code>
         for ( Element elt : document.select( "code" ) ) {
+            String optionsBuffer = "";
             if ( elt.hasAttr( "type" ) ) {
-                elt.replaceWith( new DataNode( "\n```" + elt.attr( "type" ) + "\n" + elt.html()
-                        + "\n```\n", "" ) );
-            } else {
-                elt.replaceWith( new DataNode( "\n```\n" + elt.html() + "\n```\n", "" ) );
+                optionsBuffer += elt.attr( "type" );
             }
+            if ( elt.hasAttr( "surligne" ) ) {
+                optionsBuffer += " hl_lines=\"" + elt.attr( "surligne" ).replace( ",", " " ) + "\"";
+            }
+            elt.replaceWith( new DataNode( "\n```" + optionsBuffer + "\n" + elt.html() + "\n```\n", "" ) );
         }
 
         // conversion <minicode>
@@ -167,7 +259,13 @@ public class TestJSoup {
 
         // conversion <video>
         for ( Element elt : document.select( "video" ) ) {
-            elt.replaceWith( TextNode.createFromEncoded( elt.html(), "" ) );
+            if ( elt.text().contains( ".youtube.com" ) ) {
+                elt.replaceWith( TextNode.createFromEncoded( elt.html(), "" ) );
+            } else if ( elt.text().contains( ".dailymotion.com" ) ) {
+                elt.replaceWith( TextNode.createFromEncoded( elt.html(), "" ) );
+            } else {
+                elt.replaceWith( TextNode.createFromEncoded( "![video](" + elt.html() + ")", "" ) );
+            }
         }
 
         document = Jsoup.parse( escapeMarkdownHtmlContent( document.toString() ), "", Parser.xmlParser() );
@@ -412,7 +510,6 @@ public class TestJSoup {
                 for ( int c = 0; c < ligne.children().size(); c++ ) {
                     cellule = ligne.children().get( c );
                     if ( cellule.hasAttr( "fusion_lig" ) ) {
-                        System.out.println( "YOUPI! " + cellule.html() );
                         int yspan = Integer.valueOf( cellule.attr( "fusion_lig" ) );
                         cellule.removeAttr( "fusion_lig" );
                         for ( int i = l + 1; i < l + yspan; i++ ) {
@@ -428,6 +525,17 @@ public class TestJSoup {
                 }
             }
         }
+
+        document = Jsoup.parse( escapeMarkdownHtmlContent( document.toString() ), "", Parser.xmlParser() );
+        document.outputSettings().prettyPrint( false );
+        document.outputSettings().escapeMode( EscapeMode.none );
+        document.outputSettings().charset( "UTF-8" );
+
+        // TODO : TEMP >> nettoyage des sauts de ligne intra-cellule
+        /*
+         * for ( Element cellule : document.select( "cellule" ) ) { cellule.html( cellule.html().replace( "\r", " " ).replace( "\n", " " )
+         * ); }
+         */
 
         document = Jsoup.parse( escapeMarkdownHtmlContent( document.toString() ), "", Parser.xmlParser() );
         document.outputSettings().prettyPrint( false );
@@ -450,24 +558,25 @@ public class TestJSoup {
                 i++;
                 cellules = tableau.getElementsByTag( "ligne" ).get( i ).getElementsByTag( "cellule" );
             }
-            System.out.println( String.format( "YOUHOU, ligne contenant %d colonnes.", cellules.size() ) );
             largeurTableau = cellules.size();
 
             int hauteurTableau = tableau.getElementsByTag( "ligne" ).size();
 
             // par défaut, on considère qu'il n'y a pas d'en-têtes
-            String[] header = new String[0];
-            // si des en-tête sont définies, on initialise l'array header[]
+            boolean hasEntete = false;
+
+            // si des en-tête sont définies
             if ( !tableau.getElementsByTag( "entete" ).isEmpty() ) {
-                header = new String[largeurTableau];
-                hauteurTableau--;
+                hasEntete = true;
             }
 
-            String[][] data = new String[hauteurTableau][largeurTableau];
+            Cellule[][] data = new Cellule[hauteurTableau][largeurTableau];
 
-            for ( int k = 0; k < hauteurTableau; k++ )
-                for ( int j = 0; j < largeurTableau; j++ )
-                    data[k][j] = "";
+            for ( int k = 0; k < hauteurTableau; k++ ) {
+                for ( int j = 0; j < largeurTableau; j++ ) {
+                    data[k][j] = new Cellule();
+                }
+            }
 
             i = 0;
             cellules = tableau.getElementsByTag( "ligne" ).first().getElementsByTag( "entete" );
@@ -477,40 +586,172 @@ public class TestJSoup {
             }
 
             if ( !cellules.isEmpty() ) {
-                System.out.println( "Tableau avec en-têtes" );
+                hasEntete = true;
+                // Tableau avec en-têtes
                 i = 0;
                 for ( Element cellule : cellules ) {
-                    header[i] = cellule.html();
-                    System.out.println( String.format( "header[%d] = %s", i, header[i] ) );
+                    int cellMaxWidth = 0;
+                    for ( String cellInnerLine : cellule.html().split( "\r\n|\n" ) ) {
+                        data[0][i].texte.add( cellInnerLine );
+                        if ( cellInnerLine.length() > cellMaxWidth ) {
+                            cellMaxWidth = cellInnerLine.length();
+                        }
+                    }
+                    data[0][i].largeur = cellMaxWidth;
+                    // System.out.println( String.format( "data[%d][%d] = %s", 0, i, data[0][i] ) );
                     i++;
-
                 }
             }
 
-            int indexLigne = 0;
+            int indexLigne = hasEntete ? 1 : 0;
             for ( Element ligne : tableau.getElementsByTag( "ligne" ) ) {
                 cellules = ligne.getElementsByTag( "cellule" );
                 if ( !cellules.isEmpty() ) {
                     i = 0;
                     for ( Element cellule : cellules ) {
-
-                        data[indexLigne][i] = cellule.html();
-                        System.out.println( String.format( "data[%d][%d] = %s", indexLigne, i, data[indexLigne][i] ) );
+                        int cellMaxWidth = 0;
+                        for ( String cellInnerLine : cellule.html().split( "\r\n|\n" ) ) {
+                            data[indexLigne][i].texte.add( cellInnerLine );
+                            if ( cellInnerLine.length() > cellMaxWidth ) {
+                                cellMaxWidth = cellInnerLine.length();
+                            }
+                        }
+                        data[indexLigne][i].largeur = cellMaxWidth;
+                        // System.out.println( String.format( "data[%d][%d] = %s", indexLigne, i, data[indexLigne][i] ) );
                         i++;
                     }
                     indexLigne++;
                 }
             }
 
-            System.out.println( "Tableau: " + hauteurTableau + "x" + largeurTableau );
+            // parcours par ligne
+            for ( int k = 0; k < hauteurTableau; k++ ) {
+                int rowMaxHeight = 0;
+                // determination de la hauteur max de la ligne
+                for ( int j = 0; j < largeurTableau; j++ ) {
+                    if ( data[k][j].texte.size() > rowMaxHeight ) {
+                        rowMaxHeight = data[k][j].texte.size();
+                    }
+                }
+                // complétion de toutes les cellules de la ligne avec des lignes vides
+                for ( int j = 0; j < largeurTableau; j++ ) {
+                    while ( data[k][j].texte.size() < rowMaxHeight ) {
+                        data[k][j].texte.add( "" );
+                    }
+                }
 
-            ASCIITable.getInstance().printTable( header, data );
+            }
+
+            // parcours par colonne
+            for ( int k = 0; k < largeurTableau; k++ ) {
+                int columnMaxWidth = 0;
+                // determination de la largeur max de la colonne
+                for ( int j = 0; j < hauteurTableau; j++ ) {
+                    if ( data[j][k].largeur > columnMaxWidth ) {
+                        columnMaxWidth = data[j][k].largeur;
+                    }
+                }
+                // complétion de toutes les lignes de textes de la colonne avec des espaces
+                for ( int j = 0; j < hauteurTableau; j++ ) {
+                    data[j][k].largeur = columnMaxWidth;
+
+                    ListIterator<String> listIterator = data[j][k].texte.listIterator();
+                    while ( listIterator.hasNext() ) {
+                        String lineTemp = listIterator.next();
+                        int offset = columnMaxWidth - lineTemp.length();
+                        for ( int o = 0; o < offset; o++ ) {
+                            lineTemp += " ";
+                        }
+                        listIterator.set( lineTemp );
+                    }
+
+                }
+            }
+
+            // dessin du tableau, à base de popopopop...
+            String tableauEntier = "";
+
+            // si tableau avec en-têtes
+            if ( hasEntete ) {
+                // dessin bordure supérieure
+                tableauEntier += "+";
+                for ( int colonneIndex = 0; colonneIndex < largeurTableau; colonneIndex++ ) {
+                    for ( int cursor = 0; cursor < data[0][colonneIndex].largeur; cursor++ ) {
+                        tableauEntier += "-";
+                    }
+                    tableauEntier += "+";
+                }
+                tableauEntier += "\n";
+
+                // dessin row
+                int curLines = 0;
+                while ( curLines < data[0][0].texte.size() ) {
+                    tableauEntier += "|";
+                    for ( int colonneIndex = 0; colonneIndex < largeurTableau; colonneIndex++ ) {
+                        tableauEntier += data[0][colonneIndex].texte.get( curLines );
+                        tableauEntier += "|";
+                    }
+                    tableauEntier += "\n";
+                    curLines++;
+                }
+
+                // dessin bordure inférieure
+                tableauEntier += "+";
+                for ( int colonneIndex = 0; colonneIndex < largeurTableau; colonneIndex++ ) {
+                    for ( int cursor = 0; cursor < data[0][colonneIndex].largeur; cursor++ ) {
+                        tableauEntier += "=";
+                    }
+                    tableauEntier += "+";
+                }
+                tableauEntier += "\n";
+                hasEntete = true;
+
+            }
+
+            for ( int ligneIndex = hasEntete ? 1 : 0; ligneIndex < hauteurTableau; ligneIndex++ ) {
+                if ( !hasEntete ) {
+                    // dessin bordure supérieure
+                    tableauEntier += "+";
+                    for ( int colonneIndex = 0; colonneIndex < largeurTableau; colonneIndex++ ) {
+                        for ( int cursor = 0; cursor < data[ligneIndex][colonneIndex].largeur; cursor++ ) {
+                            tableauEntier += "-";
+                        }
+                        tableauEntier += "+";
+                    }
+                    tableauEntier += "\n";
+                }
+
+                // pour dessiner les bordures ensuite
+                hasEntete = false;
+
+                // dessin row
+                int curLines = 0;
+                while ( curLines < data[ligneIndex][0].texte.size() ) {
+                    tableauEntier += "|";
+                    for ( int colonneIndex = 0; colonneIndex < largeurTableau; colonneIndex++ ) {
+                        tableauEntier += data[ligneIndex][colonneIndex].texte.get( curLines );
+                        tableauEntier += "|";
+                    }
+                    tableauEntier += "\n";
+                    curLines++;
+                }
+            }
+            tableauEntier += "+";
+            for ( int colonneIndex = 0; colonneIndex < largeurTableau; colonneIndex++ ) {
+                for ( int cursor = 0; cursor < data[0][colonneIndex].largeur; cursor++ ) {
+                    tableauEntier += "-";
+                }
+                tableauEntier += "+";
+            }
+            tableauEntier += "\n";
+
+            System.out.println( "Tableau: " + largeurTableau + "x" + hauteurTableau );
+            System.out.println( tableauEntier );
 
             if ( !"".equals( legendeTableau ) ) {
-                tableau.replaceWith( new DataNode( "\n" + ASCIITable.getInstance().getTable( header, data ) + "Table:"
-                        + legendeTableau + "\n", "" ) );
+                tableau.replaceWith( new DataNode( "\n" + tableauEntier + "Table:" + legendeTableau + "\n", "" ) );
             } else {
-                tableau.replaceWith( new DataNode( "\n" + ASCIITable.getInstance().getTable( header, data ) + "\n", "" ) );
+                tableau.replaceWith( new DataNode( "\n" + tableauEntier + "\n", "" ) );
             }
         }
 
@@ -605,9 +846,22 @@ public class TestJSoup {
     }
 
     /*
-     * Méthode d'échappement des chevrons < et > contenus au sein des sections <code> et <minicode>, pour que JSoup ne cherche pas à corriger les
-     * balises HTML-like non fermées qu'elles peuvent éventuellement contenir (exemple : sans ce traitement, le code Java "List<String>" deviendrait
-     * "List<string></string>" ...).
+     * Méthode helper pour le listage des fichiers d'un répertoire.
+     */
+    public static void listFilesForFolder( final File folder ) {
+        for ( final File fileEntry : folder.listFiles() ) {
+            if ( fileEntry.isDirectory() ) {
+                listFilesForFolder( fileEntry );
+            } else {
+                listeFichiersTutos.add( fileEntry.getName() );
+            }
+        }
+    }
+
+    /*
+     * Méthode d'échappement des chevrons < et > contenus au sein des sections <code> et <minicode>, pour que JSoup ne cherche pas à
+     * corriger les balises HTML-like non fermées qu'elles peuvent éventuellement contenir (exemple : sans ce traitement, le code Java
+     * "List<String>" deviendrait "List<string></string>" ...).
      */
     public static String escapeZcodeHtmlContent( String contenu ) {
         final Pattern ZCODE_CODE = Pattern.compile( "(<code([^>]*?)>)(.+?)(</code>)", Pattern.DOTALL );
@@ -643,9 +897,9 @@ public class TestJSoup {
     }
 
     /*
-     * Méthode d'échappement des chevrons < et > contenus au sein des sections ``` et `, pour que JSoup ne cherche pas à corriger les balises
-     * HTML-like non fermées qu'elles peuvent éventuellement contenir (exemple : sans ce traitement, le code Java "List<String>" deviendrait
-     * "List<string></string>" ...).
+     * Méthode d'échappement des chevrons < et > contenus au sein des sections ``` et `, pour que JSoup ne cherche pas à corriger les
+     * balises HTML-like non fermées qu'elles peuvent éventuellement contenir (exemple : sans ce traitement, le code Java "List<String>"
+     * deviendrait "List<string></string>" ...).
      */
     public static String escapeMarkdownHtmlContent( String contenu ) {
         final Pattern MD_CODE = Pattern.compile( "(```)(.+?)(```)", Pattern.DOTALL );
@@ -681,10 +935,10 @@ public class TestJSoup {
     }
 
     /*
-     * Méthode de nettoyage de la source, pour que les espaces mangés en début ou fin de balises zCode soient restitués respectivement avant ou après
-     * les balises. C'est nécessaire, car le parseur HTML utilisé derrière ne prend logiquement pas en comtpe ces espaces en début et fin de balise,
-     * et comme le zCode a souvent été mis n'importe comment pas les auteurs, ça pourrait causer la suppression indésirable d'espaces et/ou de sauts
-     * de lignes.
+     * Méthode de nettoyage de la source, pour que les espaces mangés en début ou fin de balises zCode soient restitués respectivement avant
+     * ou après les balises. C'est nécessaire, car le parseur HTML utilisé derrière ne prend logiquement pas en comtpe ces espaces en début
+     * et fin de balise, et comme le zCode a souvent été mis n'importe comment pas les auteurs, ça pourrait causer la suppression
+     * indésirable d'espaces et/ou de sauts de lignes.
      */
     public static String cleanZcodeSource( String contenu ) {
         // Correction des balises simples où le zCode a bouffé l'espace d'avant ou d'après

@@ -6,6 +6,7 @@ Il nous reste un concept important à aborder &gt; avant de passer à la pratiqu
 
 Du <italique><gras>gras dans</gras> de l'italique</italique>.
 De <gras><italique>l'italique dans</italique> du gras</gras>.
+Et du<barre> barre sans espac</barre>es.
 
 Comme vous devez maintenant savoir le faire, rendez-vous sur <lien doc="php"><minicode type="php">date</minicode></lien> pour avoir la description de la fonction.
 
