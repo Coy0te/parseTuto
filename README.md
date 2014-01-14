@@ -23,7 +23,7 @@ Elle est commentée, il suffit de l'exécuter (sous Eclipse, Run As > Java App) 
 1. Les tableaux ne sont pas entièrement gérés :
     - <del>un saut de ligne dans une cellule casse la mise en forme markdown du tableau</del>
     - les attributs de cellule `rowspan` et `colspan` ne sont pas bien gérés, pour le moment le contenu d'une cellule spannée est dupliqué dans sa version splitée.
-1. Dans les fichiers générés, le parseur ne réécrit pas les tags `<![CDATA[` et `]]>` autour des contenus modifiés.
+1. <del>Dans les fichiers générés, le parseur ne réécrit pas les tags `<![CDATA[` et `]]>` autour des contenus modifiés.</del>
 
 A priori, pas d'autre bug.
 
