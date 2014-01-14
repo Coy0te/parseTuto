@@ -3,7 +3,6 @@ package zds.parseTuto;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -12,7 +11,18 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.transform.OutputKeys;
+import javax.xml.transform.Result;
+import javax.xml.transform.Source;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerException;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.TransformerFactoryConfigurationError;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
 import javax.xml.xpath.XPathExpressionException;
 
 import org.jsoup.Jsoup;
@@ -23,104 +33,85 @@ import org.jsoup.nodes.Entities.EscapeMode;
 import org.jsoup.nodes.TextNode;
 import org.jsoup.parser.Parser;
 import org.jsoup.select.Elements;
+import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
 public class TestJSoup {
     private static List<String> listeFichiersTutos = new ArrayList<String>();
-    private static final String FOLDER_TUTO_ENTER  = "/Users/gaowenjia/work/tuto_devock/";
-    private static final String FOLDER_TUTO_EXIT   = "/Users/gaowenjia/work/tuto_devock/parsed/";
+    private static final String FOLDER_TUTO_ENTER  = "/chemin/vers/repertoire/lecture/";
+    private static final String FOLDER_TUTO_EXIT   = "/chemin/vers/repertoire/ecriture/";
 
     public static void main( String[] args ) throws SAXException, IOException, ParserConfigurationException,
-            XPathExpressionException {
+            XPathExpressionException, TransformerFactoryConfigurationError, TransformerException {
         File folder = new File( FOLDER_TUTO_ENTER );
-        PrintWriter writer;
         listFilesForFolder( folder );
 
         for ( String fileStr : listeFichiersTutos ) {
-            String contenu = readFile( FOLDER_TUTO_ENTER + fileStr );
+            File xmlFile = new File( FOLDER_TUTO_ENTER + fileStr );
+            System.out.println( "#### " + fileStr + " ####" );
 
-            Document document = Jsoup.parse( escapeZcodeHtmlContent( contenu ), "", Parser.xmlParser() );
-            document.outputSettings().prettyPrint( false );
-            document.outputSettings().escapeMode( EscapeMode.none );
-            document.outputSettings().charset( "UTF-8" );
-
-            // introduction
+            DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
+            DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
+            org.w3c.dom.Document doc = dBuilder.parse( xmlFile );
+            doc.getDocumentElement().normalize();
             String buffer;
-            for ( Element elt : document.select( "introduction" ) ) {
-                buffer = cleanZcodeSource( elt.html() );
+
+            NodeList nodes = doc.getElementsByTagName( "introduction" );
+            for ( int i = 0; i < nodes.getLength(); i++ ) {
+                org.w3c.dom.Element child = (org.w3c.dom.Element) nodes.item( i );
+                buffer = cleanZcodeSource( child.getTextContent() );
                 buffer = zCodeToMarkdown( buffer );
-                elt.replaceWith( new DataNode( "<introduction><![CDATA[" + buffer + "]]></introduction>", "" ) );
+                child.setTextContent( buffer );
             }
 
-            document = Jsoup.parse( escapeMarkdownHtmlContent( escapeZcodeHtmlContent( document.toString() ) ), "",
-                    Parser.xmlParser() );
-            document.outputSettings().prettyPrint( false );
-            document.outputSettings().escapeMode( EscapeMode.none );
-            document.outputSettings().charset( "UTF-8" );
-
-            // conclusion
-            for ( Element elt : document.select( "conclusion" ) ) {
-                buffer = cleanZcodeSource( elt.html() );
+            nodes = doc.getElementsByTagName( "conclusion" );
+            for ( int i = 0; i < nodes.getLength(); i++ ) {
+                org.w3c.dom.Element child = (org.w3c.dom.Element) nodes.item( i );
+                buffer = cleanZcodeSource( child.getTextContent() );
                 buffer = zCodeToMarkdown( buffer );
-                elt.replaceWith( new DataNode( "<conclusion><![CDATA[" + buffer + "]]></conclusion>", "" ) );
+                child.setTextContent( buffer );
             }
 
-            document = Jsoup.parse( escapeMarkdownHtmlContent( escapeZcodeHtmlContent( document.toString() ) ), "",
-                    Parser.xmlParser() );
-            document.outputSettings().prettyPrint( false );
-            document.outputSettings().escapeMode( EscapeMode.none );
-            document.outputSettings().charset( "UTF-8" );
-
-            // texte
-            for ( Element elt : document.select( "texte" ) ) {
-                buffer = cleanZcodeSource( elt.html() );
+            nodes = doc.getElementsByTagName( "texte" );
+            for ( int i = 0; i < nodes.getLength(); i++ ) {
+                org.w3c.dom.Element child = (org.w3c.dom.Element) nodes.item( i );
+                buffer = cleanZcodeSource( child.getTextContent() );
                 buffer = zCodeToMarkdown( buffer );
-                elt.replaceWith( new DataNode( "<texte><![CDATA[" + buffer + "]]></texte>", "" ) );
+                child.setTextContent( buffer );
             }
 
-            document = Jsoup.parse( escapeMarkdownHtmlContent( escapeZcodeHtmlContent( document.toString() ) ), "",
-                    Parser.xmlParser() );
-            document.outputSettings().prettyPrint( false );
-            document.outputSettings().escapeMode( EscapeMode.none );
-            document.outputSettings().charset( "UTF-8" );
-
-            // label
-            for ( Element elt : document.select( "label" ) ) {
-                buffer = cleanZcodeSource( elt.html() );
+            nodes = doc.getElementsByTagName( "label" );
+            for ( int i = 0; i < nodes.getLength(); i++ ) {
+                org.w3c.dom.Element child = (org.w3c.dom.Element) nodes.item( i );
+                buffer = cleanZcodeSource( child.getTextContent() );
                 buffer = zCodeToMarkdown( buffer );
-                elt.replaceWith( new DataNode( "<label><![CDATA[" + buffer + "]]></label>", "" ) );
+                child.setTextContent( buffer );
             }
 
-            document = Jsoup.parse( escapeMarkdownHtmlContent( escapeZcodeHtmlContent( document.toString() ) ), "",
-                    Parser.xmlParser() );
-            document.outputSettings().prettyPrint( false );
-            document.outputSettings().escapeMode( EscapeMode.none );
-            document.outputSettings().charset( "UTF-8" );
-
-            // reponse
-            for ( Element elt : document.select( "reponse" ) ) {
-                buffer = cleanZcodeSource( elt.html() );
+            nodes = doc.getElementsByTagName( "reponse" );
+            for ( int i = 0; i < nodes.getLength(); i++ ) {
+                org.w3c.dom.Element child = (org.w3c.dom.Element) nodes.item( i );
+                buffer = cleanZcodeSource( child.getTextContent() );
                 buffer = zCodeToMarkdown( buffer );
-                elt.replaceWith( new DataNode( "<reponse><![CDATA[" + buffer + "]]></reponse>", "" ) );
+                child.setTextContent( buffer );
             }
 
-            document = Jsoup.parse( escapeMarkdownHtmlContent( escapeZcodeHtmlContent( document.toString() ) ), "",
-                    Parser.xmlParser() );
-            document.outputSettings().prettyPrint( false );
-            document.outputSettings().escapeMode( EscapeMode.none );
-            document.outputSettings().charset( "UTF-8" );
-
-            // explication
-            for ( Element elt : document.select( "explication" ) ) {
-                buffer = cleanZcodeSource( elt.html() );
+            nodes = doc.getElementsByTagName( "explication" );
+            for ( int i = 0; i < nodes.getLength(); i++ ) {
+                org.w3c.dom.Element child = (org.w3c.dom.Element) nodes.item( i );
+                buffer = cleanZcodeSource( child.getTextContent() );
                 buffer = zCodeToMarkdown( buffer );
-                elt.replaceWith( new DataNode( "<explication><![CDATA[" + buffer + "]]></explication>", "" ) );
+                child.setTextContent( buffer );
             }
 
-            // Nom du fichier de sortie généré après la conversion
-            writer = new PrintWriter( FOLDER_TUTO_EXIT + fileStr, "UTF-8" );
-            writer.println( document.toString() );
-            writer.close();
+            Transformer transformer = TransformerFactory.newInstance().newTransformer();
+            transformer.setOutputProperty( OutputKeys.CDATA_SECTION_ELEMENTS,
+                    "introduction conclusion texte label reponse explication" );
+            transformer.setOutputProperty( OutputKeys.ENCODING, "UTF-8" );
+            Result output = new StreamResult( new File( FOLDER_TUTO_EXIT + fileStr ) );
+            Source input = new DOMSource( doc );
+
+            transformer.transform( input, output );
         }
 
     }
@@ -189,13 +180,23 @@ public class TestJSoup {
         // conversion <code>
         for ( Element elt : document.select( "code" ) ) {
             String optionsBuffer = "";
+            String legende = "";
             if ( elt.hasAttr( "type" ) ) {
                 optionsBuffer += elt.attr( "type" );
             }
             if ( elt.hasAttr( "surligne" ) ) {
                 optionsBuffer += " hl_lines=\"" + elt.attr( "surligne" ).replace( ",", " " ) + "\"";
             }
-            elt.replaceWith( new DataNode( "\n```" + optionsBuffer + "\n" + elt.html() + "\n```\n", "" ) );
+            if ( elt.hasAttr( "titre" ) ) {
+                legende = elt.attr( "titre" );
+            }
+
+            if ( !"".equals( legende ) ) {
+                elt.replaceWith( new DataNode( "\n```" + optionsBuffer + "\n" + elt.html() + "\n```\n" + "Code:"
+                        + legende + "\n", "" ) );
+            } else {
+                elt.replaceWith( new DataNode( "\n```" + optionsBuffer + "\n" + elt.html() + "\n```\n", "" ) );
+            }
         }
 
         // conversion <minicode>
@@ -481,6 +482,56 @@ public class TestJSoup {
         document.outputSettings().escapeMode( EscapeMode.none );
         document.outputSettings().charset( "UTF-8" );
 
+        // conversion <secret>
+        bufferTemp = "";
+        for ( Element elt : document.select( "secret" ) ) {
+            linesTemp = elt.html().split( "\r\n|\n" );
+            for ( String line : linesTemp ) {
+                bufferTemp += "\n| " + line;
+            }
+            bufferTemp += "\n";
+            elt.replaceWith( new DataNode( "\n[[secret]]" + bufferTemp, "" ) );
+
+            bufferTemp = "";
+        }
+
+        document = Jsoup.parse( escapeMarkdownHtmlContent( document.toString() ), "", Parser.xmlParser() );
+        document.outputSettings().prettyPrint( false );
+        document.outputSettings().escapeMode( EscapeMode.none );
+        document.outputSettings().charset( "UTF-8" );
+
+        // conversion <position>
+        for ( Element elt : document.select( "position" ) ) {
+            if ( elt.attr( "valeur" ).equals( "centre" ) ) {
+                elt.replaceWith( new DataNode( "\n->" + elt.html() + "<-\n", "" ) );
+            } else if ( elt.attr( "valeur" ).equals( "droite" ) ) {
+                elt.replaceWith( new DataNode( "\n->" + elt.html() + "->\n", "" ) );
+            } else {
+                elt.replaceWith( new DataNode( elt.html(), "" ) );
+            }
+        }
+
+        document = Jsoup.parse( escapeMarkdownHtmlContent( document.toString() ), "", Parser.xmlParser() );
+        document.outputSettings().prettyPrint( false );
+        document.outputSettings().escapeMode( EscapeMode.none );
+        document.outputSettings().charset( "UTF-8" );
+
+        // conversion <flottant>
+        for ( Element elt : document.select( "flottant" ) ) {
+            if ( elt.attr( "valeur" ).equals( "centre" ) ) {
+                elt.replaceWith( new DataNode( "\n->" + elt.html() + "<-\n", "" ) );
+            } else if ( elt.attr( "valeur" ).equals( "droite" ) ) {
+                elt.replaceWith( new DataNode( "\n->" + elt.html() + "->\n", "" ) );
+            } else {
+                elt.replaceWith( new DataNode( elt.html(), "" ) );
+            }
+        }
+
+        document = Jsoup.parse( escapeMarkdownHtmlContent( document.toString() ), "", Parser.xmlParser() );
+        document.outputSettings().prettyPrint( false );
+        document.outputSettings().escapeMode( EscapeMode.none );
+        document.outputSettings().charset( "UTF-8" );
+
         // nettoyage colspan <tableau>
         for ( Element tableau : document.select( "tableau" ) ) {
             for ( Element ligne : tableau.getElementsByTag( "ligne" ) ) {
@@ -531,149 +582,204 @@ public class TestJSoup {
         document.outputSettings().escapeMode( EscapeMode.none );
         document.outputSettings().charset( "UTF-8" );
 
-        // TODO : TEMP >> nettoyage des sauts de ligne intra-cellule
-        /*
-         * for ( Element cellule : document.select( "cellule" ) ) { cellule.html( cellule.html().replace( "\r", " " ).replace( "\n", " " )
-         * ); }
-         */
-
-        document = Jsoup.parse( escapeMarkdownHtmlContent( document.toString() ), "", Parser.xmlParser() );
-        document.outputSettings().prettyPrint( false );
-        document.outputSettings().escapeMode( EscapeMode.none );
-        document.outputSettings().charset( "UTF-8" );
-
         // conversion <tableau>
         for ( Element tableau : document.select( "tableau" ) ) {
-            String legendeTableau = "";
-            if ( !tableau.getElementsByTag( "legende" ).isEmpty() ) {
-                legendeTableau = tableau.getElementsByTag( "legende" ).get( 0 ).text();
-                tableau.getElementsByTag( "legende" ).get( 0 ).remove();
-            }
 
-            int largeurTableau = 0;
-            // on calcule la largeur du tableau en se basant sur sa première ligne
-            int i = 0;
-            Elements cellules = tableau.getElementsByTag( "ligne" ).first().getElementsByTag( "cellule" );
-            while ( cellules.isEmpty() ) {
-                i++;
-                cellules = tableau.getElementsByTag( "ligne" ).get( i ).getElementsByTag( "cellule" );
-            }
-            largeurTableau = cellules.size();
-
-            int hauteurTableau = tableau.getElementsByTag( "ligne" ).size();
-
-            // par défaut, on considère qu'il n'y a pas d'en-têtes
-            boolean hasEntete = false;
-
-            // si des en-tête sont définies
-            if ( !tableau.getElementsByTag( "entete" ).isEmpty() ) {
-                hasEntete = true;
-            }
-
-            Cellule[][] data = new Cellule[hauteurTableau][largeurTableau];
-
-            for ( int k = 0; k < hauteurTableau; k++ ) {
-                for ( int j = 0; j < largeurTableau; j++ ) {
-                    data[k][j] = new Cellule();
+            // MEGA try-catch pour mettre de côté les tutos qui contiennent des tableaux foireux (merci Taguan et ses tableaux non
+            // tabulaires ! xD)
+            try {
+                String legendeTableau = "";
+                if ( !tableau.getElementsByTag( "legende" ).isEmpty() ) {
+                    legendeTableau = tableau.getElementsByTag( "legende" ).get( 0 ).text();
+                    tableau.getElementsByTag( "legende" ).get( 0 ).remove();
                 }
-            }
 
-            i = 0;
-            cellules = tableau.getElementsByTag( "ligne" ).first().getElementsByTag( "entete" );
-            while ( cellules.isEmpty() && i < tableau.getElementsByTag( "ligne" ).size() ) {
-                cellules = tableau.getElementsByTag( "ligne" ).get( i ).getElementsByTag( "entete" );
-                i++;
-            }
+                int largeurTableau = 0;
+                // on calcule la largeur du tableau en se basant sur sa première ligne
+                int i = 0;
+                Elements cellules = tableau.getElementsByTag( "ligne" ).first().getElementsByTag( "cellule" );
+                while ( cellules.isEmpty() ) {
+                    i++;
+                    cellules = tableau.getElementsByTag( "ligne" ).get( i ).getElementsByTag( "cellule" );
+                }
+                largeurTableau = cellules.size();
 
-            if ( !cellules.isEmpty() ) {
-                hasEntete = true;
-                // Tableau avec en-têtes
-                i = 0;
-                for ( Element cellule : cellules ) {
-                    int cellMaxWidth = 0;
-                    for ( String cellInnerLine : cellule.html().split( "\r\n|\n" ) ) {
-                        data[0][i].texte.add( cellInnerLine );
-                        if ( cellInnerLine.length() > cellMaxWidth ) {
-                            cellMaxWidth = cellInnerLine.length();
-                        }
+                int hauteurTableau = tableau.getElementsByTag( "ligne" ).size();
+
+                // par défaut, on considère qu'il n'y a pas d'en-têtes
+                boolean hasEntete = false;
+
+                // si des en-tête sont définies
+                if ( !tableau.getElementsByTag( "entete" ).isEmpty() ) {
+                    hasEntete = true;
+                }
+
+                Cellule[][] data = new Cellule[hauteurTableau][largeurTableau];
+
+                for ( int k = 0; k < hauteurTableau; k++ ) {
+                    for ( int j = 0; j < largeurTableau; j++ ) {
+                        data[k][j] = new Cellule();
                     }
-                    data[0][i].largeur = cellMaxWidth;
-                    // System.out.println( String.format( "data[%d][%d] = %s", 0, i, data[0][i] ) );
+                }
+
+                i = 0;
+                cellules = tableau.getElementsByTag( "ligne" ).first().getElementsByTag( "entete" );
+                while ( cellules.isEmpty() && i < tableau.getElementsByTag( "ligne" ).size() ) {
+                    cellules = tableau.getElementsByTag( "ligne" ).get( i ).getElementsByTag( "entete" );
                     i++;
                 }
-            }
 
-            int indexLigne = hasEntete ? 1 : 0;
-            for ( Element ligne : tableau.getElementsByTag( "ligne" ) ) {
-                cellules = ligne.getElementsByTag( "cellule" );
                 if ( !cellules.isEmpty() ) {
+                    hasEntete = true;
+                    // Tableau avec en-têtes
                     i = 0;
                     for ( Element cellule : cellules ) {
                         int cellMaxWidth = 0;
                         for ( String cellInnerLine : cellule.html().split( "\r\n|\n" ) ) {
-                            data[indexLigne][i].texte.add( cellInnerLine );
+                            data[0][i].texte.add( cellInnerLine );
                             if ( cellInnerLine.length() > cellMaxWidth ) {
                                 cellMaxWidth = cellInnerLine.length();
                             }
                         }
-                        data[indexLigne][i].largeur = cellMaxWidth;
-                        // System.out.println( String.format( "data[%d][%d] = %s", indexLigne, i, data[indexLigne][i] ) );
+                        data[0][i].largeur = cellMaxWidth;
+                        // System.out.println( String.format( "data[%d][%d] = %s", 0, i, data[0][i] ) );
                         i++;
                     }
-                    indexLigne++;
-                }
-            }
-
-            // parcours par ligne
-            for ( int k = 0; k < hauteurTableau; k++ ) {
-                int rowMaxHeight = 0;
-                // determination de la hauteur max de la ligne
-                for ( int j = 0; j < largeurTableau; j++ ) {
-                    if ( data[k][j].texte.size() > rowMaxHeight ) {
-                        rowMaxHeight = data[k][j].texte.size();
-                    }
-                }
-                // complétion de toutes les cellules de la ligne avec des lignes vides
-                for ( int j = 0; j < largeurTableau; j++ ) {
-                    while ( data[k][j].texte.size() < rowMaxHeight ) {
-                        data[k][j].texte.add( "" );
-                    }
                 }
 
-            }
-
-            // parcours par colonne
-            for ( int k = 0; k < largeurTableau; k++ ) {
-                int columnMaxWidth = 0;
-                // determination de la largeur max de la colonne
-                for ( int j = 0; j < hauteurTableau; j++ ) {
-                    if ( data[j][k].largeur > columnMaxWidth ) {
-                        columnMaxWidth = data[j][k].largeur;
-                    }
-                }
-                // complétion de toutes les lignes de textes de la colonne avec des espaces
-                for ( int j = 0; j < hauteurTableau; j++ ) {
-                    data[j][k].largeur = columnMaxWidth;
-
-                    ListIterator<String> listIterator = data[j][k].texte.listIterator();
-                    while ( listIterator.hasNext() ) {
-                        String lineTemp = listIterator.next();
-                        int offset = columnMaxWidth - lineTemp.length();
-                        for ( int o = 0; o < offset; o++ ) {
-                            lineTemp += " ";
+                int indexLigne = hasEntete ? 1 : 0;
+                for ( Element ligne : tableau.getElementsByTag( "ligne" ) ) {
+                    cellules = ligne.getElementsByTag( "cellule" );
+                    if ( !cellules.isEmpty() ) {
+                        i = 0;
+                        for ( Element cellule : cellules ) {
+                            int cellMaxWidth = 0;
+                            for ( String cellInnerLine : cellule.html().split( "\r\n|\n" ) ) {
+                                data[indexLigne][i].texte.add( cellInnerLine );
+                                if ( cellInnerLine.length() > cellMaxWidth ) {
+                                    cellMaxWidth = cellInnerLine.length();
+                                }
+                            }
+                            data[indexLigne][i].largeur = cellMaxWidth;
+                            // System.out.println( String.format( "data[%d][%d] = %s", indexLigne, i, data[indexLigne][i] ) );
+                            i++;
                         }
-                        listIterator.set( lineTemp );
+                        indexLigne++;
+                    }
+                }
+
+                // parcours par ligne
+                for ( int k = 0; k < hauteurTableau; k++ ) {
+                    int rowMaxHeight = 0;
+                    // determination de la hauteur max de la ligne
+                    for ( int j = 0; j < largeurTableau; j++ ) {
+                        if ( data[k][j].texte.size() > rowMaxHeight ) {
+                            rowMaxHeight = data[k][j].texte.size();
+                        }
+                    }
+                    // complétion de toutes les cellules de la ligne avec des lignes vides
+                    for ( int j = 0; j < largeurTableau; j++ ) {
+                        while ( data[k][j].texte.size() < rowMaxHeight ) {
+                            data[k][j].texte.add( "" );
+                        }
                     }
 
                 }
-            }
 
-            // dessin du tableau, à base de popopopop...
-            String tableauEntier = "";
+                // parcours par colonne
+                for ( int k = 0; k < largeurTableau; k++ ) {
+                    int columnMaxWidth = 0;
+                    // determination de la largeur max de la colonne
+                    for ( int j = 0; j < hauteurTableau; j++ ) {
+                        if ( data[j][k].largeur > columnMaxWidth ) {
+                            columnMaxWidth = data[j][k].largeur;
+                        }
+                    }
+                    // complétion de toutes les lignes de textes de la colonne avec des espaces
+                    for ( int j = 0; j < hauteurTableau; j++ ) {
+                        data[j][k].largeur = columnMaxWidth;
 
-            // si tableau avec en-têtes
-            if ( hasEntete ) {
-                // dessin bordure supérieure
+                        ListIterator<String> listIterator = data[j][k].texte.listIterator();
+                        while ( listIterator.hasNext() ) {
+                            String lineTemp = listIterator.next();
+                            int offset = columnMaxWidth - lineTemp.length();
+                            for ( int o = 0; o < offset; o++ ) {
+                                lineTemp += " ";
+                            }
+                            listIterator.set( lineTemp );
+                        }
+
+                    }
+                }
+
+                // dessin du tableau, à base de popopopop...
+                String tableauEntier = "";
+
+                // si tableau avec en-têtes
+                if ( hasEntete ) {
+                    // dessin bordure supérieure
+                    tableauEntier += "+";
+                    for ( int colonneIndex = 0; colonneIndex < largeurTableau; colonneIndex++ ) {
+                        for ( int cursor = 0; cursor < data[0][colonneIndex].largeur; cursor++ ) {
+                            tableauEntier += "-";
+                        }
+                        tableauEntier += "+";
+                    }
+                    tableauEntier += "\n";
+
+                    // dessin row
+                    int curLines = 0;
+                    while ( curLines < data[0][0].texte.size() ) {
+                        tableauEntier += "|";
+                        for ( int colonneIndex = 0; colonneIndex < largeurTableau; colonneIndex++ ) {
+                            tableauEntier += data[0][colonneIndex].texte.get( curLines );
+                            tableauEntier += "|";
+                        }
+                        tableauEntier += "\n";
+                        curLines++;
+                    }
+
+                    // dessin bordure inférieure
+                    tableauEntier += "+";
+                    for ( int colonneIndex = 0; colonneIndex < largeurTableau; colonneIndex++ ) {
+                        for ( int cursor = 0; cursor < data[0][colonneIndex].largeur; cursor++ ) {
+                            tableauEntier += "=";
+                        }
+                        tableauEntier += "+";
+                    }
+                    tableauEntier += "\n";
+                    hasEntete = true;
+
+                }
+
+                for ( int ligneIndex = hasEntete ? 1 : 0; ligneIndex < hauteurTableau; ligneIndex++ ) {
+                    if ( !hasEntete ) {
+                        // dessin bordure supérieure
+                        tableauEntier += "+";
+                        for ( int colonneIndex = 0; colonneIndex < largeurTableau; colonneIndex++ ) {
+                            for ( int cursor = 0; cursor < data[ligneIndex][colonneIndex].largeur; cursor++ ) {
+                                tableauEntier += "-";
+                            }
+                            tableauEntier += "+";
+                        }
+                        tableauEntier += "\n";
+                    }
+
+                    // pour dessiner les bordures ensuite
+                    hasEntete = false;
+
+                    // dessin row
+                    int curLines = 0;
+                    while ( curLines < data[ligneIndex][0].texte.size() ) {
+                        tableauEntier += "|";
+                        for ( int colonneIndex = 0; colonneIndex < largeurTableau; colonneIndex++ ) {
+                            tableauEntier += data[ligneIndex][colonneIndex].texte.get( curLines );
+                            tableauEntier += "|";
+                        }
+                        tableauEntier += "\n";
+                        curLines++;
+                    }
+                }
                 tableauEntier += "+";
                 for ( int colonneIndex = 0; colonneIndex < largeurTableau; colonneIndex++ ) {
                     for ( int cursor = 0; cursor < data[0][colonneIndex].largeur; cursor++ ) {
@@ -683,125 +789,16 @@ public class TestJSoup {
                 }
                 tableauEntier += "\n";
 
-                // dessin row
-                int curLines = 0;
-                while ( curLines < data[0][0].texte.size() ) {
-                    tableauEntier += "|";
-                    for ( int colonneIndex = 0; colonneIndex < largeurTableau; colonneIndex++ ) {
-                        tableauEntier += data[0][colonneIndex].texte.get( curLines );
-                        tableauEntier += "|";
-                    }
-                    tableauEntier += "\n";
-                    curLines++;
+                // System.out.println( "Tableau: " + largeurTableau + "x" + hauteurTableau );
+                // System.out.println( tableauEntier );
+
+                if ( !"".equals( legendeTableau ) ) {
+                    tableau.replaceWith( new DataNode( "\n\n" + tableauEntier + "Table:" + legendeTableau + "\n\n", "" ) );
+                } else {
+                    tableau.replaceWith( new DataNode( "\n\n" + tableauEntier + "\n\n", "" ) );
                 }
-
-                // dessin bordure inférieure
-                tableauEntier += "+";
-                for ( int colonneIndex = 0; colonneIndex < largeurTableau; colonneIndex++ ) {
-                    for ( int cursor = 0; cursor < data[0][colonneIndex].largeur; cursor++ ) {
-                        tableauEntier += "=";
-                    }
-                    tableauEntier += "+";
-                }
-                tableauEntier += "\n";
-                hasEntete = true;
-
-            }
-
-            for ( int ligneIndex = hasEntete ? 1 : 0; ligneIndex < hauteurTableau; ligneIndex++ ) {
-                if ( !hasEntete ) {
-                    // dessin bordure supérieure
-                    tableauEntier += "+";
-                    for ( int colonneIndex = 0; colonneIndex < largeurTableau; colonneIndex++ ) {
-                        for ( int cursor = 0; cursor < data[ligneIndex][colonneIndex].largeur; cursor++ ) {
-                            tableauEntier += "-";
-                        }
-                        tableauEntier += "+";
-                    }
-                    tableauEntier += "\n";
-                }
-
-                // pour dessiner les bordures ensuite
-                hasEntete = false;
-
-                // dessin row
-                int curLines = 0;
-                while ( curLines < data[ligneIndex][0].texte.size() ) {
-                    tableauEntier += "|";
-                    for ( int colonneIndex = 0; colonneIndex < largeurTableau; colonneIndex++ ) {
-                        tableauEntier += data[ligneIndex][colonneIndex].texte.get( curLines );
-                        tableauEntier += "|";
-                    }
-                    tableauEntier += "\n";
-                    curLines++;
-                }
-            }
-            tableauEntier += "+";
-            for ( int colonneIndex = 0; colonneIndex < largeurTableau; colonneIndex++ ) {
-                for ( int cursor = 0; cursor < data[0][colonneIndex].largeur; cursor++ ) {
-                    tableauEntier += "-";
-                }
-                tableauEntier += "+";
-            }
-            tableauEntier += "\n";
-
-            System.out.println( "Tableau: " + largeurTableau + "x" + hauteurTableau );
-            System.out.println( tableauEntier );
-
-            if ( !"".equals( legendeTableau ) ) {
-                tableau.replaceWith( new DataNode( "\n" + tableauEntier + "Table:" + legendeTableau + "\n", "" ) );
-            } else {
-                tableau.replaceWith( new DataNode( "\n" + tableauEntier + "\n", "" ) );
-            }
-        }
-
-        document = Jsoup.parse( escapeMarkdownHtmlContent( document.toString() ), "", Parser.xmlParser() );
-        document.outputSettings().prettyPrint( false );
-        document.outputSettings().escapeMode( EscapeMode.none );
-        document.outputSettings().charset( "UTF-8" );
-
-        // conversion <secret>
-        bufferTemp = "";
-        for ( Element elt : document.select( "secret" ) ) {
-            linesTemp = elt.html().split( "\r\n|\n" );
-            for ( String line : linesTemp ) {
-                bufferTemp += "\n| " + line;
-            }
-            bufferTemp += "\n";
-            elt.replaceWith( new DataNode( "\n[[secret]]" + bufferTemp, "" ) );
-
-            bufferTemp = "";
-        }
-
-        document = Jsoup.parse( escapeMarkdownHtmlContent( document.toString() ), "", Parser.xmlParser() );
-        document.outputSettings().prettyPrint( false );
-        document.outputSettings().escapeMode( EscapeMode.none );
-        document.outputSettings().charset( "UTF-8" );
-
-        // conversion <position>
-        for ( Element elt : document.select( "position" ) ) {
-            if ( elt.attr( "valeur" ).equals( "centre" ) ) {
-                elt.replaceWith( new DataNode( "\n->" + elt.html() + "<-\n", "" ) );
-            } else if ( elt.attr( "valeur" ).equals( "droite" ) ) {
-                elt.replaceWith( new DataNode( "\n->" + elt.html() + "->\n", "" ) );
-            } else {
-                elt.replaceWith( new DataNode( elt.html(), "" ) );
-            }
-        }
-
-        document = Jsoup.parse( escapeMarkdownHtmlContent( document.toString() ), "", Parser.xmlParser() );
-        document.outputSettings().prettyPrint( false );
-        document.outputSettings().escapeMode( EscapeMode.none );
-        document.outputSettings().charset( "UTF-8" );
-
-        // conversion <flottant>
-        for ( Element elt : document.select( "flottant" ) ) {
-            if ( elt.attr( "valeur" ).equals( "centre" ) ) {
-                elt.replaceWith( new DataNode( "\n->" + elt.html() + "<-\n", "" ) );
-            } else if ( elt.attr( "valeur" ).equals( "droite" ) ) {
-                elt.replaceWith( new DataNode( "\n->" + elt.html() + "->\n", "" ) );
-            } else {
-                elt.replaceWith( new DataNode( elt.html(), "" ) );
+            } catch ( Exception e ) {
+                System.out.println( "/!\\ Erreur de parsing d'un tableau dans le tuto /!\\\n" + tableau.html() + "\n" );
             }
         }
 
