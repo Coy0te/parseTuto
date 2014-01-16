@@ -561,6 +561,9 @@ public class TestJSoup {
             if ( elt.hasAttr( "surligne" ) ) {
                 optionsBuffer += " hl_lines=\"" + elt.attr( "surligne" ).replace( ",", " " ) + "\"";
             }
+            if ( elt.hasAttr( "debut" ) ) {
+                optionsBuffer += " linenostart=\"" + elt.attr( "debut" ) + "\"";
+            }
             if ( elt.hasAttr( "titre" ) ) {
                 legende = elt.attr( "titre" );
             }
