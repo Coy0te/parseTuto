@@ -38,8 +38,8 @@ import org.xml.sax.SAXException;
 
 public class TestJSoup {
     private static List<String> listeFichiersTutos = new ArrayList<String>();
-    private static final String FOLDER_TUTO_ENTER  = "/chemin/vers/repertoire/lecture/";
-    private static final String FOLDER_TUTO_EXIT   = "/chemin/vers/repertoire/ecriture/";
+    private static final String FOLDER_TUTO_ENTER  = "/Users/gaowenjia/work/tutos_backup/";
+    private static final String FOLDER_TUTO_EXIT   = "/Users/gaowenjia/work/test/";
 
     public static void main( String[] args ) throws SAXException, IOException, ParserConfigurationException,
             XPathExpressionException, TransformerFactoryConfigurationError, TransformerException {
@@ -57,8 +57,9 @@ public class TestJSoup {
             String buffer;
 
             NodeList nodes = doc.getElementsByTagName( "introduction" );
+            org.w3c.dom.Element child;
             for ( int i = 0; i < nodes.getLength(); i++ ) {
-                org.w3c.dom.Element child = (org.w3c.dom.Element) nodes.item( i );
+                child = (org.w3c.dom.Element) nodes.item( i );
                 buffer = cleanZcodeSource( child.getTextContent() );
                 buffer = zCodeToMarkdown( buffer );
                 child.setTextContent( buffer );
@@ -66,7 +67,7 @@ public class TestJSoup {
 
             nodes = doc.getElementsByTagName( "conclusion" );
             for ( int i = 0; i < nodes.getLength(); i++ ) {
-                org.w3c.dom.Element child = (org.w3c.dom.Element) nodes.item( i );
+                child = (org.w3c.dom.Element) nodes.item( i );
                 buffer = cleanZcodeSource( child.getTextContent() );
                 buffer = zCodeToMarkdown( buffer );
                 child.setTextContent( buffer );
@@ -74,7 +75,7 @@ public class TestJSoup {
 
             nodes = doc.getElementsByTagName( "texte" );
             for ( int i = 0; i < nodes.getLength(); i++ ) {
-                org.w3c.dom.Element child = (org.w3c.dom.Element) nodes.item( i );
+                child = (org.w3c.dom.Element) nodes.item( i );
                 buffer = cleanZcodeSource( child.getTextContent() );
                 buffer = zCodeToMarkdown( buffer );
                 child.setTextContent( buffer );
@@ -82,7 +83,7 @@ public class TestJSoup {
 
             nodes = doc.getElementsByTagName( "label" );
             for ( int i = 0; i < nodes.getLength(); i++ ) {
-                org.w3c.dom.Element child = (org.w3c.dom.Element) nodes.item( i );
+                child = (org.w3c.dom.Element) nodes.item( i );
                 buffer = cleanZcodeSource( child.getTextContent() );
                 buffer = zCodeToMarkdown( buffer );
                 child.setTextContent( buffer );
@@ -90,7 +91,7 @@ public class TestJSoup {
 
             nodes = doc.getElementsByTagName( "reponse" );
             for ( int i = 0; i < nodes.getLength(); i++ ) {
-                org.w3c.dom.Element child = (org.w3c.dom.Element) nodes.item( i );
+                child = (org.w3c.dom.Element) nodes.item( i );
                 buffer = cleanZcodeSource( child.getTextContent() );
                 buffer = zCodeToMarkdown( buffer );
                 child.setTextContent( buffer );
@@ -98,7 +99,7 @@ public class TestJSoup {
 
             nodes = doc.getElementsByTagName( "explication" );
             for ( int i = 0; i < nodes.getLength(); i++ ) {
-                org.w3c.dom.Element child = (org.w3c.dom.Element) nodes.item( i );
+                child = (org.w3c.dom.Element) nodes.item( i );
                 buffer = cleanZcodeSource( child.getTextContent() );
                 buffer = zCodeToMarkdown( buffer );
                 child.setTextContent( buffer );
@@ -177,38 +178,6 @@ public class TestJSoup {
         document.outputSettings().escapeMode( EscapeMode.none );
         document.outputSettings().charset( "UTF-8" );
 
-        // conversion <code>
-        for ( Element elt : document.select( "code" ) ) {
-            String optionsBuffer = "";
-            String legende = "";
-            if ( elt.hasAttr( "type" ) ) {
-                optionsBuffer += elt.attr( "type" );
-            }
-            if ( elt.hasAttr( "surligne" ) ) {
-                optionsBuffer += " hl_lines=\"" + elt.attr( "surligne" ).replace( ",", " " ) + "\"";
-            }
-            if ( elt.hasAttr( "titre" ) ) {
-                legende = elt.attr( "titre" );
-            }
-
-            if ( !"".equals( legende ) ) {
-                elt.replaceWith( new DataNode( "\n```" + optionsBuffer + "\n" + elt.html() + "\n```\n" + "Code:"
-                        + legende + "\n", "" ) );
-            } else {
-                elt.replaceWith( new DataNode( "\n```" + optionsBuffer + "\n" + elt.html() + "\n```\n", "" ) );
-            }
-        }
-
-        // conversion <minicode>
-        for ( Element elt : document.select( "minicode" ) ) {
-            elt.replaceWith( TextNode.createFromEncoded( "`" + elt.html() + "`", "" ) );
-        }
-
-        document = Jsoup.parse( escapeMarkdownHtmlContent( document.toString() ), "", Parser.xmlParser() );
-        document.outputSettings().prettyPrint( false );
-        document.outputSettings().escapeMode( EscapeMode.none );
-        document.outputSettings().charset( "UTF-8" );
-
         // conversion <acronyme>
         // il faut d'abord enregistrer les définitions dans une Map
         // TODO: à modifier, deux acronymes de même sigles dans un même tuto vont s'écraser dans la HashMap.
@@ -218,7 +187,7 @@ public class TestJSoup {
             elt.replaceWith( TextNode.createFromEncoded( elt.html(), "" ) );
         }
 
-        document = Jsoup.parse( escapeMarkdownHtmlContent( document.toString() ), "", Parser.xmlParser() );
+        document = Jsoup.parse( escapeZcodeHtmlContent( document.toString() ), "", Parser.xmlParser() );
         document.outputSettings().prettyPrint( false );
         document.outputSettings().escapeMode( EscapeMode.none );
         document.outputSettings().charset( "UTF-8" );
@@ -238,7 +207,7 @@ public class TestJSoup {
             elt.replaceWith( TextNode.createFromEncoded( "$" + elt.html() + "$", "" ) );
         }
 
-        document = Jsoup.parse( escapeMarkdownHtmlContent( document.toString() ), "", Parser.xmlParser() );
+        document = Jsoup.parse( escapeZcodeHtmlContent( document.toString() ), "", Parser.xmlParser() );
         document.outputSettings().prettyPrint( false );
         document.outputSettings().escapeMode( EscapeMode.none );
         document.outputSettings().charset( "UTF-8" );
@@ -269,7 +238,7 @@ public class TestJSoup {
             }
         }
 
-        document = Jsoup.parse( escapeMarkdownHtmlContent( document.toString() ), "", Parser.xmlParser() );
+        document = Jsoup.parse( escapeZcodeHtmlContent( document.toString() ), "", Parser.xmlParser() );
         document.outputSettings().prettyPrint( false );
         document.outputSettings().escapeMode( EscapeMode.none );
         document.outputSettings().charset( "UTF-8" );
@@ -279,7 +248,7 @@ public class TestJSoup {
             elt.replaceWith( TextNode.createFromEncoded( "_" + elt.html() + "_", "" ) );
         }
 
-        document = Jsoup.parse( escapeMarkdownHtmlContent( document.toString() ), "", Parser.xmlParser() );
+        document = Jsoup.parse( escapeZcodeHtmlContent( document.toString() ), "", Parser.xmlParser() );
         document.outputSettings().prettyPrint( false );
         document.outputSettings().escapeMode( EscapeMode.none );
         document.outputSettings().charset( "UTF-8" );
@@ -289,7 +258,7 @@ public class TestJSoup {
             elt.replaceWith( TextNode.createFromEncoded( "**" + elt.html() + "**", "" ) );
         }
 
-        document = Jsoup.parse( escapeMarkdownHtmlContent( document.toString() ), "", Parser.xmlParser() );
+        document = Jsoup.parse( escapeZcodeHtmlContent( document.toString() ), "", Parser.xmlParser() );
         document.outputSettings().prettyPrint( false );
         document.outputSettings().escapeMode( EscapeMode.none );
         document.outputSettings().charset( "UTF-8" );
@@ -299,7 +268,7 @@ public class TestJSoup {
             elt.replaceWith( TextNode.createFromEncoded( "~~" + elt.html() + "~~", "" ) );
         }
 
-        document = Jsoup.parse( escapeMarkdownHtmlContent( document.toString() ), "", Parser.xmlParser() );
+        document = Jsoup.parse( escapeZcodeHtmlContent( document.toString() ), "", Parser.xmlParser() );
         document.outputSettings().prettyPrint( false );
         document.outputSettings().escapeMode( EscapeMode.none );
         document.outputSettings().charset( "UTF-8" );
@@ -309,7 +278,7 @@ public class TestJSoup {
             elt.replaceWith( TextNode.createFromEncoded( elt.html(), "" ) );
         }
 
-        document = Jsoup.parse( escapeMarkdownHtmlContent( document.toString() ), "", Parser.xmlParser() );
+        document = Jsoup.parse( escapeZcodeHtmlContent( document.toString() ), "", Parser.xmlParser() );
         document.outputSettings().prettyPrint( false );
         document.outputSettings().escapeMode( EscapeMode.none );
         document.outputSettings().charset( "UTF-8" );
@@ -324,7 +293,7 @@ public class TestJSoup {
             elt.replaceWith( TextNode.createFromEncoded( "\n## " + elt.text() + "\n", "" ) );
         }
 
-        document = Jsoup.parse( escapeMarkdownHtmlContent( document.toString() ), "", Parser.xmlParser() );
+        document = Jsoup.parse( escapeZcodeHtmlContent( document.toString() ), "", Parser.xmlParser() );
         document.outputSettings().prettyPrint( false );
         document.outputSettings().escapeMode( EscapeMode.none );
         document.outputSettings().charset( "UTF-8" );
@@ -334,7 +303,7 @@ public class TestJSoup {
             elt.replaceWith( TextNode.createFromEncoded( elt.html(), "" ) );
         }
 
-        document = Jsoup.parse( escapeMarkdownHtmlContent( document.toString() ), "", Parser.xmlParser() );
+        document = Jsoup.parse( escapeZcodeHtmlContent( document.toString() ), "", Parser.xmlParser() );
         document.outputSettings().prettyPrint( false );
         document.outputSettings().escapeMode( EscapeMode.none );
         document.outputSettings().charset( "UTF-8" );
@@ -344,7 +313,7 @@ public class TestJSoup {
             elt.replaceWith( TextNode.createFromEncoded( elt.html(), "" ) );
         }
 
-        document = Jsoup.parse( escapeMarkdownHtmlContent( document.toString() ), "", Parser.xmlParser() );
+        document = Jsoup.parse( escapeZcodeHtmlContent( document.toString() ), "", Parser.xmlParser() );
         document.outputSettings().prettyPrint( false );
         document.outputSettings().escapeMode( EscapeMode.none );
         document.outputSettings().charset( "UTF-8" );
@@ -354,7 +323,7 @@ public class TestJSoup {
             elt.replaceWith( TextNode.createFromEncoded( elt.html(), "" ) );
         }
 
-        document = Jsoup.parse( escapeMarkdownHtmlContent( document.toString() ), "", Parser.xmlParser() );
+        document = Jsoup.parse( escapeZcodeHtmlContent( document.toString() ), "", Parser.xmlParser() );
         document.outputSettings().prettyPrint( false );
         document.outputSettings().escapeMode( EscapeMode.none );
         document.outputSettings().charset( "UTF-8" );
@@ -397,7 +366,7 @@ public class TestJSoup {
             liste.replaceWith( new DataNode( "\n" + liste.data() + "\n\n", "" ) );
         }
 
-        document = Jsoup.parse( escapeMarkdownHtmlContent( document.toString() ), "", Parser.xmlParser() );
+        document = Jsoup.parse( escapeZcodeHtmlContent( document.toString() ), "", Parser.xmlParser() );
         document.outputSettings().prettyPrint( false );
         document.outputSettings().escapeMode( EscapeMode.none );
         document.outputSettings().charset( "UTF-8" );
@@ -420,7 +389,7 @@ public class TestJSoup {
             bufferTemp = "";
         }
 
-        document = Jsoup.parse( escapeMarkdownHtmlContent( document.toString() ), "", Parser.xmlParser() );
+        document = Jsoup.parse( escapeZcodeHtmlContent( document.toString() ), "", Parser.xmlParser() );
         document.outputSettings().prettyPrint( false );
         document.outputSettings().escapeMode( EscapeMode.none );
         document.outputSettings().charset( "UTF-8" );
@@ -477,7 +446,7 @@ public class TestJSoup {
             bufferTemp = "";
         }
 
-        document = Jsoup.parse( escapeMarkdownHtmlContent( document.toString() ), "", Parser.xmlParser() );
+        document = Jsoup.parse( escapeZcodeHtmlContent( document.toString() ), "", Parser.xmlParser() );
         document.outputSettings().prettyPrint( false );
         document.outputSettings().escapeMode( EscapeMode.none );
         document.outputSettings().charset( "UTF-8" );
@@ -495,7 +464,7 @@ public class TestJSoup {
             bufferTemp = "";
         }
 
-        document = Jsoup.parse( escapeMarkdownHtmlContent( document.toString() ), "", Parser.xmlParser() );
+        document = Jsoup.parse( escapeZcodeHtmlContent( document.toString() ), "", Parser.xmlParser() );
         document.outputSettings().prettyPrint( false );
         document.outputSettings().escapeMode( EscapeMode.none );
         document.outputSettings().charset( "UTF-8" );
@@ -511,7 +480,7 @@ public class TestJSoup {
             }
         }
 
-        document = Jsoup.parse( escapeMarkdownHtmlContent( document.toString() ), "", Parser.xmlParser() );
+        document = Jsoup.parse( escapeZcodeHtmlContent( document.toString() ), "", Parser.xmlParser() );
         document.outputSettings().prettyPrint( false );
         document.outputSettings().escapeMode( EscapeMode.none );
         document.outputSettings().charset( "UTF-8" );
@@ -527,7 +496,7 @@ public class TestJSoup {
             }
         }
 
-        document = Jsoup.parse( escapeMarkdownHtmlContent( document.toString() ), "", Parser.xmlParser() );
+        document = Jsoup.parse( escapeZcodeHtmlContent( document.toString() ), "", Parser.xmlParser() );
         document.outputSettings().prettyPrint( false );
         document.outputSettings().escapeMode( EscapeMode.none );
         document.outputSettings().charset( "UTF-8" );
@@ -547,7 +516,7 @@ public class TestJSoup {
             }
         }
 
-        document = Jsoup.parse( escapeMarkdownHtmlContent( document.toString() ), "", Parser.xmlParser() );
+        document = Jsoup.parse( escapeZcodeHtmlContent( document.toString() ), "", Parser.xmlParser() );
         document.outputSettings().prettyPrint( false );
         document.outputSettings().escapeMode( EscapeMode.none );
         document.outputSettings().charset( "UTF-8" );
@@ -575,6 +544,38 @@ public class TestJSoup {
                     }
                 }
             }
+        }
+
+        document = Jsoup.parse( escapeZcodeHtmlContent( document.toString() ), "", Parser.xmlParser() );
+        document.outputSettings().prettyPrint( false );
+        document.outputSettings().escapeMode( EscapeMode.none );
+        document.outputSettings().charset( "UTF-8" );
+
+        // conversion <code>
+        for ( Element elt : document.select( "code" ) ) {
+            String optionsBuffer = "";
+            String legende = "";
+            if ( elt.hasAttr( "type" ) ) {
+                optionsBuffer += elt.attr( "type" );
+            }
+            if ( elt.hasAttr( "surligne" ) ) {
+                optionsBuffer += " hl_lines=\"" + elt.attr( "surligne" ).replace( ",", " " ) + "\"";
+            }
+            if ( elt.hasAttr( "titre" ) ) {
+                legende = elt.attr( "titre" );
+            }
+
+            if ( !"".equals( legende ) ) {
+                elt.replaceWith( new DataNode( "\n```" + optionsBuffer + "\n" + elt.html() + "\n```\n" + "Code:"
+                        + legende + "\n", "" ) );
+            } else {
+                elt.replaceWith( new DataNode( "\n```" + optionsBuffer + "\n" + elt.html() + "\n```\n", "" ) );
+            }
+        }
+
+        // conversion <minicode>
+        for ( Element elt : document.select( "minicode" ) ) {
+            elt.replaceWith( TextNode.createFromEncoded( "`" + elt.html() + "`", "" ) );
         }
 
         document = Jsoup.parse( escapeMarkdownHtmlContent( document.toString() ), "", Parser.xmlParser() );
@@ -900,7 +901,7 @@ public class TestJSoup {
      */
     public static String escapeMarkdownHtmlContent( String contenu ) {
         final Pattern MD_CODE = Pattern.compile( "(```)(.+?)(```)", Pattern.DOTALL );
-        final Pattern MD_MINICODE = Pattern.compile( "(`)(.+?)(`)", Pattern.DOTALL );
+        final Pattern MD_MINICODE = Pattern.compile( "(`)(.+?)(`)" );
 
         Matcher matcher = MD_CODE.matcher( contenu );
         String contenuBalise = "";
