@@ -37,17 +37,18 @@ import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
 public class TestJSoup {
-    private static List<String> listeFichiersTutos = new ArrayList<String>();
-    private static final String FOLDER_TUTO_ENTER  = "/Users/gaowenjia/work/tutos_backup/";
-    private static final String FOLDER_TUTO_EXIT   = "/Users/gaowenjia/work/test/";
+    private static List<String>  listeFichiersTutos        = new ArrayList<String>();
+    private static List<String>  listeCheminsFichiersTutos = new ArrayList<String>();
+    private static final Pattern ZCODE_MATH                = Pattern.compile( "(<math>)(.+?)(</math>)" );
+    private static final String  FOLDER_TUTO_ENTER         = "/Users/gaowenjia/work/tutos_ths/tutos_sdzv3/Sources/";
 
     public static void main( String[] args ) throws SAXException, IOException, ParserConfigurationException,
             XPathExpressionException, TransformerFactoryConfigurationError, TransformerException {
         File folder = new File( FOLDER_TUTO_ENTER );
         listFilesForFolder( folder );
 
-        for ( String fileStr : listeFichiersTutos ) {
-            File xmlFile = new File( FOLDER_TUTO_ENTER + fileStr );
+        for ( String fileStr : listeCheminsFichiersTutos ) {
+            File xmlFile = new File( fileStr );
             System.out.println( "#### " + fileStr + " ####" );
 
             DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
@@ -106,10 +107,9 @@ public class TestJSoup {
             }
 
             Transformer transformer = TransformerFactory.newInstance().newTransformer();
-            transformer.setOutputProperty( OutputKeys.CDATA_SECTION_ELEMENTS,
-                    "introduction conclusion texte label reponse explication" );
+            transformer.setOutputProperty( OutputKeys.CDATA_SECTION_ELEMENTS, "introduction conclusion texte label reponse explication" );
             transformer.setOutputProperty( OutputKeys.ENCODING, "UTF-8" );
-            Result output = new StreamResult( new File( FOLDER_TUTO_EXIT + fileStr ) );
+            Result output = new StreamResult( new File( fileStr ) );
             Source input = new DOMSource( doc );
 
             transformer.transform( input, output );
@@ -130,7 +130,20 @@ public class TestJSoup {
      */
     public static String zCodeToMarkdown( String contenu ) {
 
-        Document document = Jsoup.parse( escapeZcodeHtmlContent( contenu ), "", Parser.xmlParser() );
+        contenu = escapeZcodeHtmlContent( contenu );
+        // conversion <math>
+        Matcher matcher = ZCODE_MATH.matcher( contenu );
+        String contenuBalise = "";
+        StringBuffer sb = new StringBuffer();
+        while ( matcher.find() ) {
+            contenuBalise = matcher.group( 2 );
+            contenuBalise = contenuBalise.replaceAll( "\\\\usepackage\\{.+?\\}", "" );
+            matcher.appendReplacement( sb, Matcher.quoteReplacement( "$" + contenuBalise + "$" ) );
+            contenuBalise = "";
+        }
+        matcher.appendTail( sb );
+
+        Document document = Jsoup.parse( sb.toString(), "", Parser.xmlParser() );
         document.outputSettings().prettyPrint( false );
         document.outputSettings().escapeMode( EscapeMode.none );
         document.outputSettings().charset( "UTF-8" );
@@ -143,8 +156,6 @@ public class TestJSoup {
                 elt.replaceWith( TextNode.createFromEncoded( "[" + elt.html() + "](" + "http://php.net/"
                         + elt.attr( "url" ) + ")", "" ) );
             } else if ( elt.hasAttr( "doc" ) && elt.attr( "doc" ).equals( "php" ) ) {
-                // TODO: vérifier que elt.text() ressort bien uniquement le nom de la méthode php, et pas les éventuelles balises zCode
-                // autour
                 elt.replaceWith( TextNode.createFromEncoded( "[" + elt.html() + "](" + "http://php.net/" + elt.text()
                         + ")", "" ) );
             } else if ( elt.hasAttr( "type" ) && elt.attr( "type" ).equals( "wikipedia" ) &&
@@ -200,11 +211,6 @@ public class TestJSoup {
         // conversion <exposant>
         for ( Element elt : document.select( "exposant" ) ) {
             elt.replaceWith( TextNode.createFromEncoded( "^" + elt.html() + "^", "" ) );
-        }
-
-        // conversion <math>
-        for ( Element elt : document.select( "math" ) ) {
-            elt.replaceWith( TextNode.createFromEncoded( "$" + elt.html() + "$", "" ) );
         }
 
         document = Jsoup.parse( escapeZcodeHtmlContent( document.toString() ), "", Parser.xmlParser() );
@@ -329,8 +335,41 @@ public class TestJSoup {
         document.outputSettings().charset( "UTF-8" );
 
         // conversion <liste>
-        // détection des sous-listes de sous-listes
-        // (tant pis pour les malades qu'ont fait des listes à plus de trois niveaux)
+        // détection des sous-listes à six niveaux max
+        // (tant pis pour les gros marteaux qu'ont fait des listes à plus de six niveaux)
+        for ( Element liste : document.select( "liste liste liste liste liste liste" ) ) {
+            for ( Element puce : liste.children() ) {
+                if ( liste.hasAttr( "type" ) ) {
+                    puce.replaceWith( new DataNode( "                    1. " + puce.html() + "\n", "" ) );
+                } else {
+                    puce.replaceWith( new DataNode( "                    - " + puce.html() + "\n", "" ) );
+                }
+            }
+            liste.replaceWith( new DataNode( liste.data(), "" ) );
+        }
+
+        for ( Element liste : document.select( "liste liste liste liste liste" ) ) {
+            for ( Element puce : liste.children() ) {
+                if ( liste.hasAttr( "type" ) ) {
+                    puce.replaceWith( new DataNode( "                1. " + puce.html() + "\n", "" ) );
+                } else {
+                    puce.replaceWith( new DataNode( "                - " + puce.html() + "\n", "" ) );
+                }
+            }
+            liste.replaceWith( new DataNode( liste.data(), "" ) );
+        }
+
+        for ( Element liste : document.select( "liste liste liste liste" ) ) {
+            for ( Element puce : liste.children() ) {
+                if ( liste.hasAttr( "type" ) ) {
+                    puce.replaceWith( new DataNode( "            1. " + puce.html() + "\n", "" ) );
+                } else {
+                    puce.replaceWith( new DataNode( "            - " + puce.html() + "\n", "" ) );
+                }
+            }
+            liste.replaceWith( new DataNode( liste.data(), "" ) );
+        }
+
         for ( Element liste : document.select( "liste liste liste" ) ) {
             for ( Element puce : liste.children() ) {
                 if ( liste.hasAttr( "type" ) ) {
@@ -375,17 +414,18 @@ public class TestJSoup {
         String[] linesTemp;
         String bufferTemp = "";
         for ( Element elt : document.select( "citation" ) ) {
+            if ( elt.hasAttr( "nom" ) ) {
+                bufferTemp += "\n=[" + elt.attr( "nom" ) + "]";
+                if ( elt.hasAttr( "lien" ) ) {
+                    bufferTemp += "(" + elt.attr( "lien" ) + ")";
+                }
+            }
             linesTemp = elt.html().split( "\r\n|\n" );
             for ( String line : linesTemp ) {
                 bufferTemp += "\n> " + line;
             }
             bufferTemp += "\n";
-            if ( elt.hasAttr( "nom" ) ) {
-                elt.replaceWith( new DataNode( "**" + elt.attr( "nom" ) + " a écrit :**" + bufferTemp,
-                        "" ) );
-            } else {
-                elt.replaceWith( new DataNode( bufferTemp, "" ) );
-            }
+            elt.replaceWith( new DataNode( bufferTemp, "" ) );
             bufferTemp = "";
         }
 
@@ -471,13 +511,17 @@ public class TestJSoup {
 
         // conversion <position>
         for ( Element elt : document.select( "position" ) ) {
-            if ( elt.attr( "valeur" ).equals( "centre" ) ) {
-                elt.replaceWith( new DataNode( "\n->" + elt.html() + "<-\n", "" ) );
-            } else if ( elt.attr( "valeur" ).equals( "droite" ) ) {
-                elt.replaceWith( new DataNode( "\n->" + elt.html() + "->\n", "" ) );
-            } else {
-                elt.replaceWith( new DataNode( elt.html(), "" ) );
-            }
+            elt.replaceWith( new DataNode( elt.html(), "" ) );
+        }
+
+        document = Jsoup.parse( escapeZcodeHtmlContent( document.toString() ), "", Parser.xmlParser() );
+        document.outputSettings().prettyPrint( false );
+        document.outputSettings().escapeMode( EscapeMode.none );
+        document.outputSettings().charset( "UTF-8" );
+
+        // conversion <position> (deuxième passe pour les fous de l'alignement imbriqué)
+        for ( Element elt : document.select( "position" ) ) {
+            elt.replaceWith( new DataNode( elt.html(), "" ) );
         }
 
         document = Jsoup.parse( escapeZcodeHtmlContent( document.toString() ), "", Parser.xmlParser() );
@@ -487,12 +531,22 @@ public class TestJSoup {
 
         // conversion <flottant>
         for ( Element elt : document.select( "flottant" ) ) {
-            if ( elt.attr( "valeur" ).equals( "centre" ) ) {
-                elt.replaceWith( new DataNode( "\n->" + elt.html() + "<-\n", "" ) );
-            } else if ( elt.attr( "valeur" ).equals( "droite" ) ) {
-                elt.replaceWith( new DataNode( "\n->" + elt.html() + "->\n", "" ) );
-            } else {
-                elt.replaceWith( new DataNode( elt.html(), "" ) );
+            elt.replaceWith( new DataNode( elt.html(), "" ) );
+        }
+
+        document = Jsoup.parse( escapeZcodeHtmlContent( document.toString() ), "", Parser.xmlParser() );
+        document.outputSettings().prettyPrint( false );
+        document.outputSettings().escapeMode( EscapeMode.none );
+        document.outputSettings().charset( "UTF-8" );
+
+        // nettoyage <tableau> pour les tarés qui ont aligné des trucs au sein d'une cellule...
+        for ( Element tableau : document.select( "tableau" ) ) {
+            for ( Element ligne : tableau.getElementsByTag( "ligne" ) ) {
+                for ( Element cellule : ligne.children() ) {
+                    for ( Element position : cellule.getElementsByTag( "position" ) ) {
+                        position.replaceWith( new DataNode( position.html(), "" ) );
+                    }
+                }
             }
         }
 
@@ -855,6 +909,9 @@ public class TestJSoup {
                 listFilesForFolder( fileEntry );
             } else {
                 listeFichiersTutos.add( fileEntry.getName() );
+                if ( !fileEntry.getAbsolutePath().contains( "metadata.xml" ) && fileEntry.getAbsolutePath().contains( ".xml" ) ) {
+                    listeCheminsFichiersTutos.add( fileEntry.getAbsolutePath() );
+                }
             }
         }
     }
@@ -1005,6 +1062,12 @@ public class TestJSoup {
         contenu = contenu.replaceAll( "(\\s+)</acronyme>", "</acronyme>$1" );
         contenu = contenu.replaceAll( "<minicode([^>]*?)>(\\s+)", "$2<minicode$1>" );
         contenu = contenu.replaceAll( "(\\s+)</minicode>", "</minicode>$1" );
+
+        // Rectification des doublons (fréquents...) de zCode
+        contenu = contenu.replace( "<italique><italique>", "<italique>" );
+        contenu = contenu.replace( "</italique></italique>", "</italique>" );
+        contenu = contenu.replace( "<gras><gras>", "<gras>" );
+        contenu = contenu.replace( "</gras></gras>", "</gras>" );
 
         return contenu;
     }
