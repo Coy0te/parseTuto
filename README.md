@@ -24,7 +24,7 @@ Elle est commentée, il suffit de l'exécuter (sous Eclipse, Run As > Java App) 
     - <del>un saut de ligne dans une cellule casse la mise en forme markdown du tableau</del>
     - les attributs de cellule `rowspan` et `colspan` ne sont pas bien gérés, pour le moment le contenu d'une cellule spannée est dupliqué dans sa version splitée.
 1. <del>Dans les fichiers générés, le parseur ne réécrit pas les tags `<![CDATA[` et `]]>` autour des contenus modifiés.</del>
-1. les tableaux qui contiennent des balises `<position>` alors qu'ils sont eux-mêmes entourés de balises `<position>`... déconnent à la conversion md -> html, car la balise `<position>` imbriquée n'est pas parsée, mais est présente dans le tableau, et ensuite disparait du tabluea, niquant l'alignement des cellules... Piste de correction : virer les balises position au sein d'un tableau, elles ne seront de toute manière pas interprétées.
+1. <del>les tableaux qui contiennent des balises `<position>` alors qu'ils sont eux-mêmes entourés de balises `<position>`... déconnent à la conversion md -> html, car la balise `<position>` imbriquée n'est pas parsée, mais est présente dans le tableau, et ensuite disparait du tabluea, niquant l'alignement des cellules...</del>
 
 A priori, pas d'autre bug.
 
