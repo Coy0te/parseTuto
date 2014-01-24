@@ -13,7 +13,7 @@ Parseur zCode -> markdown.
 # Utilisation
 
 La seule classe est **TestJSoup.java.**, dans le package `zds.parseTuto`.
-Elle prend en entrée un répertoire contenant les fichiers .tuto formatés en zCode, et produit en sortie les mêmes fichiers formatés en markdown (syntaxe évoluée).
+Elle prend en entrée un répertoire contenant les fichiers .tuto formatés en zCode, et les écrase en sortie par les mêmes fichiers formatés en markdown (syntaxe évoluée).
 
 Elle est commentée, il suffit de l'exécuter (sous Eclipse, Run As > Java App) pour générer le fichier en sortie.
 
