@@ -7,7 +7,7 @@ Parseur zCode -> markdown.
 # Technos
 
 - développé en Java
-- s'appuie sur la lib `org.jsoup` (parseur HTML)
+- s'appuie sur la lib `org.jsoup` (parseur HTML), légèrement modifiée pour les contraintes du format .tuto
 
 
 # Utilisation
