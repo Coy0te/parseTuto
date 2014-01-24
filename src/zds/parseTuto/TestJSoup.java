@@ -40,7 +40,7 @@ public class TestJSoup {
     private static List<String>  listeFichiersTutos        = new ArrayList<String>();
     private static List<String>  listeCheminsFichiersTutos = new ArrayList<String>();
     private static final Pattern ZCODE_MATH                = Pattern.compile( "(<math>)(.+?)(</math>)" );
-    private static final String  FOLDER_TUTO_ENTER         = "/Users/gaowenjia/work/tutos_ths/tutos_sdzv3/Sources/";
+    private static final String  FOLDER_TUTO_ENTER         = "C:\\Users\\munierm\\Desktop\\test\\";
 
     public static void main( String[] args ) throws SAXException, IOException, ParserConfigurationException,
             XPathExpressionException, TransformerFactoryConfigurationError, TransformerException {
@@ -107,7 +107,8 @@ public class TestJSoup {
             }
 
             Transformer transformer = TransformerFactory.newInstance().newTransformer();
-            transformer.setOutputProperty( OutputKeys.CDATA_SECTION_ELEMENTS, "introduction conclusion texte label reponse explication" );
+            transformer.setOutputProperty( OutputKeys.CDATA_SECTION_ELEMENTS,
+                    "introduction conclusion texte label reponse explication" );
             transformer.setOutputProperty( OutputKeys.ENCODING, "UTF-8" );
             Result output = new StreamResult( new File( fileStr ) );
             Source input = new DOMSource( doc );
@@ -120,11 +121,11 @@ public class TestJSoup {
     /*
      * Méthode de conversion de toutes les balises du zCode vers leur équivalent en syntaxe markdown. S'appuie sur le parseur HTML JSoup.
      * 
-     * Les multiples appels à JSoup.parse() sont effectués afin de traiter correctement les balises imbriquées : sans ce retour à zéro
-     * systématique, le parseur n'agirait pas sur les contenus déjà parsés dans une boucle antérieure.
+     * Les multiples appels à JSoup.parse() sont effectués afin de traiter correctement les balises imbriquées : sans ce retour à zéro systématique,
+     * le parseur n'agirait pas sur les contenus déjà parsés dans une boucle antérieure.
      * 
-     * Les appels à escapeHtmlContent() sont systématiques eux-aussi, pour éviter que le parseur ne vienne fourrer son nez dans le contenu
-     * des balises <code> et <minicode> à chaque nouveau parsage.
+     * Les appels à escapeHtmlContent() sont systématiques eux-aussi, pour éviter que le parseur ne vienne fourrer son nez dans le contenu des balises
+     * <code> et <minicode> à chaque nouveau parsage.
      * 
      * Malgré la conception baclée et les multiples itérations, les perfs sont très bonnes en comparaison à des traitements par regex. =)
      */
@@ -235,13 +236,7 @@ public class TestJSoup {
 
         // conversion <video>
         for ( Element elt : document.select( "video" ) ) {
-            if ( elt.text().contains( ".youtube.com" ) ) {
-                elt.replaceWith( TextNode.createFromEncoded( elt.html(), "" ) );
-            } else if ( elt.text().contains( ".dailymotion.com" ) ) {
-                elt.replaceWith( TextNode.createFromEncoded( elt.html(), "" ) );
-            } else {
-                elt.replaceWith( TextNode.createFromEncoded( "![video](" + elt.html() + ")", "" ) );
-            }
+            elt.replaceWith( TextNode.createFromEncoded( "!(" + elt.html() + ")", "" ) );
         }
 
         document = Jsoup.parse( escapeZcodeHtmlContent( document.toString() ), "", Parser.xmlParser() );
@@ -414,15 +409,16 @@ public class TestJSoup {
         String[] linesTemp;
         String bufferTemp = "";
         for ( Element elt : document.select( "citation" ) ) {
-            if ( elt.hasAttr( "nom" ) ) {
-                bufferTemp += "\n=[" + elt.attr( "nom" ) + "]";
-                if ( elt.hasAttr( "lien" ) ) {
-                    bufferTemp += "(" + elt.attr( "lien" ) + ")";
-                }
-            }
             linesTemp = elt.html().split( "\r\n|\n" );
             for ( String line : linesTemp ) {
                 bufferTemp += "\n> " + line;
+            }
+            if ( elt.hasAttr( "nom" ) ) {
+                if ( elt.hasAttr( "lien" ) ) {
+                    bufferTemp += "\nSource: [" + elt.attr( "nom" ) + "](" + elt.attr( "lien" ) + ")";
+                } else {
+                    bufferTemp += "\nSource: " + elt.attr( "nom" );
+                }
             }
             bufferTemp += "\n";
             elt.replaceWith( new DataNode( bufferTemp, "" ) );
@@ -909,7 +905,8 @@ public class TestJSoup {
                 listFilesForFolder( fileEntry );
             } else {
                 listeFichiersTutos.add( fileEntry.getName() );
-                if ( !fileEntry.getAbsolutePath().contains( "metadata.xml" ) && fileEntry.getAbsolutePath().contains( ".xml" ) ) {
+                if ( !fileEntry.getAbsolutePath().contains( "metadata.xml" )
+                        && fileEntry.getAbsolutePath().contains( ".xml" ) ) {
                     listeCheminsFichiersTutos.add( fileEntry.getAbsolutePath() );
                 }
             }
@@ -917,9 +914,9 @@ public class TestJSoup {
     }
 
     /*
-     * Méthode d'échappement des chevrons < et > contenus au sein des sections <code> et <minicode>, pour que JSoup ne cherche pas à
-     * corriger les balises HTML-like non fermées qu'elles peuvent éventuellement contenir (exemple : sans ce traitement, le code Java
-     * "List<String>" deviendrait "List<string></string>" ...).
+     * Méthode d'échappement des chevrons < et > contenus au sein des sections <code> et <minicode>, pour que JSoup ne cherche pas à corriger les
+     * balises HTML-like non fermées qu'elles peuvent éventuellement contenir (exemple : sans ce traitement, le code Java "List<String>" deviendrait
+     * "List<string></string>" ...).
      */
     public static String escapeZcodeHtmlContent( String contenu ) {
         final Pattern ZCODE_CODE = Pattern.compile( "(<code([^>]*?)>)(.+?)(</code>)", Pattern.DOTALL );
@@ -955,9 +952,9 @@ public class TestJSoup {
     }
 
     /*
-     * Méthode d'échappement des chevrons < et > contenus au sein des sections ``` et `, pour que JSoup ne cherche pas à corriger les
-     * balises HTML-like non fermées qu'elles peuvent éventuellement contenir (exemple : sans ce traitement, le code Java "List<String>"
-     * deviendrait "List<string></string>" ...).
+     * Méthode d'échappement des chevrons < et > contenus au sein des sections ``` et `, pour que JSoup ne cherche pas à corriger les balises
+     * HTML-like non fermées qu'elles peuvent éventuellement contenir (exemple : sans ce traitement, le code Java "List<String>" deviendrait
+     * "List<string></string>" ...).
      */
     public static String escapeMarkdownHtmlContent( String contenu ) {
         final Pattern MD_CODE = Pattern.compile( "(```)(.+?)(```)", Pattern.DOTALL );
@@ -993,10 +990,10 @@ public class TestJSoup {
     }
 
     /*
-     * Méthode de nettoyage de la source, pour que les espaces mangés en début ou fin de balises zCode soient restitués respectivement avant
-     * ou après les balises. C'est nécessaire, car le parseur HTML utilisé derrière ne prend logiquement pas en comtpe ces espaces en début
-     * et fin de balise, et comme le zCode a souvent été mis n'importe comment pas les auteurs, ça pourrait causer la suppression
-     * indésirable d'espaces et/ou de sauts de lignes.
+     * Méthode de nettoyage de la source, pour que les espaces mangés en début ou fin de balises zCode soient restitués respectivement avant ou après
+     * les balises. C'est nécessaire, car le parseur HTML utilisé derrière ne prend logiquement pas en comtpe ces espaces en début et fin de balise,
+     * et comme le zCode a souvent été mis n'importe comment pas les auteurs, ça pourrait causer la suppression indésirable d'espaces et/ou de sauts
+     * de lignes.
      */
     public static String cleanZcodeSource( String contenu ) {
         // Correction des balises simples où le zCode a bouffé l'espace d'avant ou d'après
