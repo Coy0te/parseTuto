@@ -40,7 +40,9 @@ public class TestJSoup {
     private static List<String>  listeFichiersTutos        = new ArrayList<String>();
     private static List<String>  listeCheminsFichiersTutos = new ArrayList<String>();
     private static final Pattern ZCODE_MATH                = Pattern.compile( "(<math>)(.+?)(</math>)" );
-    private static final String  FOLDER_TUTO_ENTER         = "C:\\Users\\munierm\\Desktop\\test\\";
+    private static final Pattern ZCODE_DOLLAR              = Pattern
+                                                                   .compile( "(?!<(code|minicode)[^>]*>)(\\$)(?![^<]*<\\/(code|minicode)>)" );
+    private static final String  FOLDER_TUTO_ENTER         = "/Users/gaowenjia/work/tutos_ths/tutos_sdzv3/Sources/";
 
     public static void main( String[] args ) throws SAXException, IOException, ParserConfigurationException,
             XPathExpressionException, TransformerFactoryConfigurationError, TransformerException {
@@ -118,33 +120,44 @@ public class TestJSoup {
 
     }
 
-    /*
+    /**
      * Méthode de conversion de toutes les balises du zCode vers leur équivalent en syntaxe markdown. S'appuie sur le parseur HTML JSoup.
      * 
-     * Les multiples appels à JSoup.parse() sont effectués afin de traiter correctement les balises imbriquées : sans ce retour à zéro systématique,
-     * le parseur n'agirait pas sur les contenus déjà parsés dans une boucle antérieure.
+     * Les multiples appels à JSoup.parse() sont effectués afin de traiter correctement les balises imbriquées : sans ce retour à zéro
+     * systématique, le parseur n'agirait pas sur les contenus déjà parsés dans une boucle antérieure.
      * 
-     * Les appels à escapeHtmlContent() sont systématiques eux-aussi, pour éviter que le parseur ne vienne fourrer son nez dans le contenu des balises
-     * <code> et <minicode> à chaque nouveau parsage.
+     * Les appels à escapeHtmlContent() sont systématiques eux-aussi, pour éviter que le parseur ne vienne fourrer son nez dans le contenu
+     * des balises <code> et <minicode> à chaque nouveau parsage.
      * 
      * Malgré la conception baclée et les multiples itérations, les perfs sont très bonnes en comparaison à des traitements par regex. =)
      */
     public static String zCodeToMarkdown( String contenu ) {
 
         contenu = escapeZcodeHtmlContent( contenu );
+
+        // conversion dollar
+        Matcher matcherDollar = ZCODE_DOLLAR.matcher( contenu );
+        contenu = matcherDollar.replaceAll( "BOURCIFLETTE" );
+        contenu = contenu.replace( "BOURCIFLETTE", "\\$" );
+
+        Document document = Jsoup.parse( contenu, "", Parser.xmlParser() );
+        document.outputSettings().prettyPrint( false );
+        document.outputSettings().escapeMode( EscapeMode.none );
+        document.outputSettings().charset( "UTF-8" );
+
         // conversion <math>
         Matcher matcher = ZCODE_MATH.matcher( contenu );
         String contenuBalise = "";
-        StringBuffer sb = new StringBuffer();
+        StringBuffer sb2 = new StringBuffer();
         while ( matcher.find() ) {
             contenuBalise = matcher.group( 2 );
             contenuBalise = contenuBalise.replaceAll( "\\\\usepackage\\{.+?\\}", "" );
-            matcher.appendReplacement( sb, Matcher.quoteReplacement( "$" + contenuBalise + "$" ) );
+            matcher.appendReplacement( sb2, Matcher.quoteReplacement( "$" + contenuBalise + "$" ) );
             contenuBalise = "";
         }
-        matcher.appendTail( sb );
+        matcher.appendTail( sb2 );
 
-        Document document = Jsoup.parse( sb.toString(), "", Parser.xmlParser() );
+        document = Jsoup.parse( sb2.toString(), "", Parser.xmlParser() );
         document.outputSettings().prettyPrint( false );
         document.outputSettings().escapeMode( EscapeMode.none );
         document.outputSettings().charset( "UTF-8" );
@@ -405,6 +418,41 @@ public class TestJSoup {
         document.outputSettings().escapeMode( EscapeMode.none );
         document.outputSettings().charset( "UTF-8" );
 
+        // conversion <code>
+        for ( Element elt : document.select( "code" ) ) {
+            String optionsBuffer = "";
+            String legende = "";
+            if ( elt.hasAttr( "type" ) ) {
+                optionsBuffer += elt.attr( "type" );
+            }
+            if ( elt.hasAttr( "surligne" ) ) {
+                optionsBuffer += " hl_lines=\"" + elt.attr( "surligne" ).replace( ",", " " ) + "\"";
+            }
+            if ( elt.hasAttr( "debut" ) ) {
+                optionsBuffer += " linenostart=\"" + elt.attr( "debut" ) + "\"";
+            }
+            if ( elt.hasAttr( "titre" ) ) {
+                legende = elt.attr( "titre" );
+            }
+
+            if ( !"".equals( legende ) ) {
+                elt.replaceWith( new DataNode( "\n```" + optionsBuffer + "\n" + elt.html() + "\n```\n" + "Code:"
+                        + legende + "\n", "" ) );
+            } else {
+                elt.replaceWith( new DataNode( "\n```" + optionsBuffer + "\n" + elt.html() + "\n```\n", "" ) );
+            }
+        }
+
+        // conversion <minicode>
+        for ( Element elt : document.select( "minicode" ) ) {
+            elt.replaceWith( TextNode.createFromEncoded( "`" + elt.html() + "`", "" ) );
+        }
+
+        document = Jsoup.parse( escapeMarkdownHtmlContent( document.toString() ), "", Parser.xmlParser() );
+        document.outputSettings().prettyPrint( false );
+        document.outputSettings().escapeMode( EscapeMode.none );
+        document.outputSettings().charset( "UTF-8" );
+
         // conversion <citation>
         String[] linesTemp;
         String bufferTemp = "";
@@ -425,7 +473,7 @@ public class TestJSoup {
             bufferTemp = "";
         }
 
-        document = Jsoup.parse( escapeZcodeHtmlContent( document.toString() ), "", Parser.xmlParser() );
+        document = Jsoup.parse( escapeMarkdownHtmlContent( document.toString() ), "", Parser.xmlParser() );
         document.outputSettings().prettyPrint( false );
         document.outputSettings().escapeMode( EscapeMode.none );
         document.outputSettings().charset( "UTF-8" );
@@ -482,7 +530,7 @@ public class TestJSoup {
             bufferTemp = "";
         }
 
-        document = Jsoup.parse( escapeZcodeHtmlContent( document.toString() ), "", Parser.xmlParser() );
+        document = Jsoup.parse( escapeMarkdownHtmlContent( document.toString() ), "", Parser.xmlParser() );
         document.outputSettings().prettyPrint( false );
         document.outputSettings().escapeMode( EscapeMode.none );
         document.outputSettings().charset( "UTF-8" );
@@ -500,7 +548,7 @@ public class TestJSoup {
             bufferTemp = "";
         }
 
-        document = Jsoup.parse( escapeZcodeHtmlContent( document.toString() ), "", Parser.xmlParser() );
+        document = Jsoup.parse( escapeMarkdownHtmlContent( document.toString() ), "", Parser.xmlParser() );
         document.outputSettings().prettyPrint( false );
         document.outputSettings().escapeMode( EscapeMode.none );
         document.outputSettings().charset( "UTF-8" );
@@ -510,7 +558,7 @@ public class TestJSoup {
             elt.replaceWith( new DataNode( elt.html(), "" ) );
         }
 
-        document = Jsoup.parse( escapeZcodeHtmlContent( document.toString() ), "", Parser.xmlParser() );
+        document = Jsoup.parse( escapeMarkdownHtmlContent( document.toString() ), "", Parser.xmlParser() );
         document.outputSettings().prettyPrint( false );
         document.outputSettings().escapeMode( EscapeMode.none );
         document.outputSettings().charset( "UTF-8" );
@@ -520,7 +568,7 @@ public class TestJSoup {
             elt.replaceWith( new DataNode( elt.html(), "" ) );
         }
 
-        document = Jsoup.parse( escapeZcodeHtmlContent( document.toString() ), "", Parser.xmlParser() );
+        document = Jsoup.parse( escapeMarkdownHtmlContent( document.toString() ), "", Parser.xmlParser() );
         document.outputSettings().prettyPrint( false );
         document.outputSettings().escapeMode( EscapeMode.none );
         document.outputSettings().charset( "UTF-8" );
@@ -530,7 +578,7 @@ public class TestJSoup {
             elt.replaceWith( new DataNode( elt.html(), "" ) );
         }
 
-        document = Jsoup.parse( escapeZcodeHtmlContent( document.toString() ), "", Parser.xmlParser() );
+        document = Jsoup.parse( escapeMarkdownHtmlContent( document.toString() ), "", Parser.xmlParser() );
         document.outputSettings().prettyPrint( false );
         document.outputSettings().escapeMode( EscapeMode.none );
         document.outputSettings().charset( "UTF-8" );
@@ -546,7 +594,7 @@ public class TestJSoup {
             }
         }
 
-        document = Jsoup.parse( escapeZcodeHtmlContent( document.toString() ), "", Parser.xmlParser() );
+        document = Jsoup.parse( escapeMarkdownHtmlContent( document.toString() ), "", Parser.xmlParser() );
         document.outputSettings().prettyPrint( false );
         document.outputSettings().escapeMode( EscapeMode.none );
         document.outputSettings().charset( "UTF-8" );
@@ -566,7 +614,7 @@ public class TestJSoup {
             }
         }
 
-        document = Jsoup.parse( escapeZcodeHtmlContent( document.toString() ), "", Parser.xmlParser() );
+        document = Jsoup.parse( escapeMarkdownHtmlContent( document.toString() ), "", Parser.xmlParser() );
         document.outputSettings().prettyPrint( false );
         document.outputSettings().escapeMode( EscapeMode.none );
         document.outputSettings().charset( "UTF-8" );
@@ -594,41 +642,6 @@ public class TestJSoup {
                     }
                 }
             }
-        }
-
-        document = Jsoup.parse( escapeZcodeHtmlContent( document.toString() ), "", Parser.xmlParser() );
-        document.outputSettings().prettyPrint( false );
-        document.outputSettings().escapeMode( EscapeMode.none );
-        document.outputSettings().charset( "UTF-8" );
-
-        // conversion <code>
-        for ( Element elt : document.select( "code" ) ) {
-            String optionsBuffer = "";
-            String legende = "";
-            if ( elt.hasAttr( "type" ) ) {
-                optionsBuffer += elt.attr( "type" );
-            }
-            if ( elt.hasAttr( "surligne" ) ) {
-                optionsBuffer += " hl_lines=\"" + elt.attr( "surligne" ).replace( ",", " " ) + "\"";
-            }
-            if ( elt.hasAttr( "debut" ) ) {
-                optionsBuffer += " linenostart=\"" + elt.attr( "debut" ) + "\"";
-            }
-            if ( elt.hasAttr( "titre" ) ) {
-                legende = elt.attr( "titre" );
-            }
-
-            if ( !"".equals( legende ) ) {
-                elt.replaceWith( new DataNode( "\n```" + optionsBuffer + "\n" + elt.html() + "\n```\n" + "Code:"
-                        + legende + "\n", "" ) );
-            } else {
-                elt.replaceWith( new DataNode( "\n```" + optionsBuffer + "\n" + elt.html() + "\n```\n", "" ) );
-            }
-        }
-
-        // conversion <minicode>
-        for ( Element elt : document.select( "minicode" ) ) {
-            elt.replaceWith( TextNode.createFromEncoded( "`" + elt.html() + "`", "" ) );
         }
 
         document = Jsoup.parse( escapeMarkdownHtmlContent( document.toString() ), "", Parser.xmlParser() );
@@ -905,18 +918,17 @@ public class TestJSoup {
                 listFilesForFolder( fileEntry );
             } else {
                 listeFichiersTutos.add( fileEntry.getName() );
-                if ( !fileEntry.getAbsolutePath().contains( "metadata.xml" )
-                        && fileEntry.getAbsolutePath().contains( ".xml" ) ) {
+                if ( fileEntry.getAbsolutePath().contains( ".tuto" ) ) {
                     listeCheminsFichiersTutos.add( fileEntry.getAbsolutePath() );
                 }
             }
         }
     }
 
-    /*
-     * Méthode d'échappement des chevrons < et > contenus au sein des sections <code> et <minicode>, pour que JSoup ne cherche pas à corriger les
-     * balises HTML-like non fermées qu'elles peuvent éventuellement contenir (exemple : sans ce traitement, le code Java "List<String>" deviendrait
-     * "List<string></string>" ...).
+    /**
+     * Méthode d'échappement des chevrons < et > contenus au sein des sections <code> et <minicode>, pour que JSoup ne cherche pas à
+     * corriger les balises HTML-like non fermées qu'elles peuvent éventuellement contenir (exemple : sans ce traitement, le code Java
+     * "List<String>" deviendrait "List<string></string>" ...).
      */
     public static String escapeZcodeHtmlContent( String contenu ) {
         final Pattern ZCODE_CODE = Pattern.compile( "(<code([^>]*?)>)(.+?)(</code>)", Pattern.DOTALL );
@@ -951,10 +963,10 @@ public class TestJSoup {
         return sb2.toString();
     }
 
-    /*
-     * Méthode d'échappement des chevrons < et > contenus au sein des sections ``` et `, pour que JSoup ne cherche pas à corriger les balises
-     * HTML-like non fermées qu'elles peuvent éventuellement contenir (exemple : sans ce traitement, le code Java "List<String>" deviendrait
-     * "List<string></string>" ...).
+    /**
+     * Méthode d'échappement des chevrons < et > contenus au sein des sections ``` et `, pour que JSoup ne cherche pas à corriger les
+     * balises HTML-like non fermées qu'elles peuvent éventuellement contenir (exemple : sans ce traitement, le code Java "List<String>"
+     * deviendrait "List<string></string>" ...).
      */
     public static String escapeMarkdownHtmlContent( String contenu ) {
         final Pattern MD_CODE = Pattern.compile( "(```)(.+?)(```)", Pattern.DOTALL );
@@ -989,13 +1001,17 @@ public class TestJSoup {
         return sb2.toString();
     }
 
-    /*
-     * Méthode de nettoyage de la source, pour que les espaces mangés en début ou fin de balises zCode soient restitués respectivement avant ou après
-     * les balises. C'est nécessaire, car le parseur HTML utilisé derrière ne prend logiquement pas en comtpe ces espaces en début et fin de balise,
-     * et comme le zCode a souvent été mis n'importe comment pas les auteurs, ça pourrait causer la suppression indésirable d'espaces et/ou de sauts
-     * de lignes.
+    /**
+     * Méthode de nettoyage de la source, pour que les espaces mangés en début ou fin de balises zCode soient restitués respectivement avant
+     * ou après les balises. C'est nécessaire, car le parseur HTML utilisé derrière ne prend logiquement pas en comtpe ces espaces en début
+     * et fin de balise, et comme le zCode a souvent été mis n'importe comment pas les auteurs, ça pourrait causer la suppression
+     * indésirable d'espaces et/ou de sauts de lignes.
      */
     public static String cleanZcodeSource( String contenu ) {
+        // Correction des URLs des images distantes
+        contenu = contenu.replace( "http://www.siteduzero.com/uploads/fr/", "http://uploads.siteduzero.com/" );
+        contenu = contenu.replace( "uploads/fr/", "http://uploads.siteduzero.com/" );
+
         // Correction des balises simples où le zCode a bouffé l'espace d'avant ou d'après
         contenu = contenu.replaceAll( "<gras>(\\s+)", "$1<gras>" );
         contenu = contenu.replaceAll( "(\\s+)</gras>", "</gras>$1" );
