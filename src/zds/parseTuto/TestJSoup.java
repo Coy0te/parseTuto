@@ -1009,8 +1009,10 @@ public class TestJSoup {
      */
     public static String cleanZcodeSource( String contenu ) {
         // Correction des URLs des images distantes
-        contenu = contenu.replace( "http://www.siteduzero.com/uploads/fr/", "http://uploads.siteduzero.com/" );
-        contenu = contenu.replace( "uploads/fr/", "http://uploads.siteduzero.com/" );
+        contenu = contenu.replace( "http://www.siteduzero.com/uploads/fr/files/", "http://uploads.siteduzero.com/files/" );
+        contenu = contenu.replace( "http://www.siteduzero.com/uploads/fr/thb/", "http://uploads.siteduzero.com/thb/" );
+        contenu = contenu.replace( "uploads/fr/files/", "http://uploads.siteduzero.com/files/" );
+        contenu = contenu.replace( "uploads/fr/thb/", "http://uploads.siteduzero.com/thb/" );
 
         // Correction des balises simples où le zCode a bouffé l'espace d'avant ou d'après
         contenu = contenu.replaceAll( "<gras>(\\s+)", "$1<gras>" );
